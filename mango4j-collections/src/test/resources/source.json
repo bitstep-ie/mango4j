@@ -1,0 +1,24 @@
+{
+  "services": {
+    "pg": {
+      "plan": "small",
+      "params": {
+        "memory": true
+      },
+      "regions": [
+        "Goodbye"
+      ],
+      "options": [
+        false,
+        [
+          {
+            "in-memory": true
+          },
+          {
+            "redo-logs": false
+          }
+        ]
+      ]
+    }
+  }
+}

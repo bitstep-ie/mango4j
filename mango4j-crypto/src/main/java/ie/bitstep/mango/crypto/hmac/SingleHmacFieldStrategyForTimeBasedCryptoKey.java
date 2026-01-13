@@ -1,0 +1,44 @@
+package ie.bitstep.mango.crypto.hmac;
+
+import ie.bitstep.mango.crypto.HmacStrategyHelper;
+import ie.bitstep.mango.crypto.core.domain.CryptoKey;
+import ie.bitstep.mango.crypto.core.exceptions.ActiveHmacKeyNotFoundException;
+
+import java.util.List;
+
+import static java.time.Instant.now;
+
+/**
+ * This HMAC strategy eliminates the problem related to the second question in the {@link SingleHmacFieldStrategy}
+ * documentation. So it's slightly better than that HMAC strategy but still not recommended (especially if your
+ * entity uses HMACs for unique values).
+ * <p>
+ * The way key rotation works with this strategy is that when you add the new
+ * {@link CryptoKey} to a tenant you also set the {@link CryptoKey#keyStartTime} attribute to some time in the future
+ * when you know all instances of your application will have updated their tenant caches and are all seeing this new
+ * HMAC key in the tenant's list of HMAC keys. This means that application operations will only start using this key
+ * after that date.
+ */
+public final class SingleHmacFieldStrategyForTimeBasedCryptoKey extends SingleHmacFieldStrategy {
+
+	public SingleHmacFieldStrategyForTimeBasedCryptoKey(Class<?> annotatedEntityClass, HmacStrategyHelper hmacStrategyHelper) {
+		super(annotatedEntityClass, hmacStrategyHelper);
+	}
+
+	@Override
+	protected CryptoKey getHmacKeyToUse(List<CryptoKey> currentHmacKeys) {
+		CryptoKey cryptoKeyToUse = null;
+		for (CryptoKey hmacKey : currentHmacKeys) {
+			if (hmacKey.getKeyStartTime() != null && hmacKey.getKeyStartTime().isBefore(now())) {
+				cryptoKeyToUse = hmacKey;
+				break;
+			}
+		}
+
+		if (cryptoKeyToUse != null) {
+			return cryptoKeyToUse;
+		} else {
+			throw new ActiveHmacKeyNotFoundException();
+		}
+	}
+}

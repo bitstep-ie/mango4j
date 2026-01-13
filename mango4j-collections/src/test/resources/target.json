@@ -1,0 +1,10 @@
+{
+  "services": {
+    "pg": {
+      "plan": "large",
+      "regions": [
+        "Hello"
+      ]
+    }
+  }
+}
