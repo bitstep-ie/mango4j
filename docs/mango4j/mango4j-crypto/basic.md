@@ -10,7 +10,7 @@ the [mango4j-crypto-example](TBD) module in the mango4j-examples repository for 
 working Springboot application which shows how to use this library with each HMAC strategy (explained further in this document).
 
 This library is a framework for implementing ALE in Java applications. It is up to applications to choose which EncryptionServiceDelegates should be used for the actual
-cryptographic operations. EncryptionServiceDelegates are separate modules which can be included as dependencies for whatever cryptographic providers you want to support.
+cryptographic operations. EncryptionServiceDelegates are separate modules which have approved implementations of EncryptionServiceDelegate. Feel free to create your own EncryptionServiceDelegate implementations.
 
 ## Annotations
 
@@ -19,7 +19,7 @@ The 2 main annotations that developers will use will be the @Encrypt and @Hmac a
 ### @Encrypt
 
 The @Encrypt annotation should be placed on fields which must be encrypted. This annotation also requires the @EncryptedBlob partner annotation to be placed on the (single) field
-where the library should put the resulting ciphertext (which is generated in one go for all fields), so you only need one @EncryptodBlob field regardless of the number of @Encrypt
+where the library should put the resulting ciphertext (which is generated in one go for all fields), so you only need one @EncryptedBlob field regardless of the number of @Encrypt
 fields. This is shown in the example entity code below.
 
 **Note: All fields marked with @Encrypt must be transient or the library will throw an error on registration of the entity.**

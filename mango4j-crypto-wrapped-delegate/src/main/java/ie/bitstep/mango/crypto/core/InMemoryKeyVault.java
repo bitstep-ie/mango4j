@@ -6,10 +6,14 @@ import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.security.auth.DestroyFailedException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static java.lang.System.Logger.Level.DEBUG;
 
 /**
  * Singleton InMemoryKeyVault.
@@ -17,8 +21,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Stores ciphertext + IV + vault key under a UUID.
  * - Provides dependency injection for testability.
  */
-public enum InMemoryKeyVault {
+enum InMemoryKeyVault {
 	INSTANCE;
+
+	private static final System.Logger LOGGER = System.getLogger(InMemoryKeyVault.class.getName());
 
 	private static final String ENCRYPTION_ALGORITHM = "AES";
 	private static final int KEY_SIZE = 256;
@@ -44,7 +50,7 @@ public enum InMemoryKeyVault {
 	 * Store raw key material; returns the UUID handle.
 	 */
 	@SuppressWarnings("java:S112")
-	public UUID put(byte[] rawKeyBytes) {
+	UUID put(byte[] rawKeyBytes) {
 		SecretKey vaultKey = keyGenerator.generateKey();
 		byte[] iv = new byte[IV_LENGTH];
 		random.nextBytes(iv);
@@ -67,7 +73,7 @@ public enum InMemoryKeyVault {
 	 * Retrieve and decrypt the key, as raw bytes.
 	 */
 	@SuppressWarnings("java:S112")
-	public byte[] get(UUID id) {
+	byte[] get(UUID id) {
 		VaultEntry entry = store.get(id);
 		if (entry == null) return null; // NOSONAR: Needed to indicate non-existence
 
@@ -80,11 +86,22 @@ public enum InMemoryKeyVault {
 		}
 	}
 
-	public void remove(UUID id) {
-		store.remove(id);
+	void remove(UUID id) {
+		VaultEntry vaultEntry = store.remove(id);
+		if (vaultEntry == null) {
+			return;
+		}
+
+		Arrays.fill(vaultEntry.ciphertext, (byte) 0);
+		Arrays.fill(vaultEntry.iv, (byte) 0);
+		try {
+			vaultEntry.vaultKey.destroy();
+		} catch (DestroyFailedException e) {
+			LOGGER.log(DEBUG, "Error occurred calling SecretKey.destroy(). This is common enough and happens because the SecretKey implementation doesn't support it");
+		}
 	}
 
-	public int size() {
+	int size() {
 		return store.size();
 	}
 

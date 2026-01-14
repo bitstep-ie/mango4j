@@ -30,6 +30,7 @@ class ReflectionUtilsTest {
 		assertThat(ReflectionUtils.isCoreType(Double.class)).isTrue();
 		assertThat(ReflectionUtils.isCoreType(uuid.getClass())).isFalse();
 		assertThat(ReflectionUtils.isCoreType(uuid)).isFalse();
+		assertThat(ReflectionUtils.isCoreType(1)).isTrue();
 	}
 
 	@Test

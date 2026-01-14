@@ -1,6 +1,7 @@
 package ie.bitstep.mango.crypto;
 
 import ie.bitstep.mango.crypto.annotations.CascadeEncrypt;
+import ie.bitstep.mango.crypto.annotations.EnableMigrationSupport;
 import ie.bitstep.mango.crypto.annotations.Encrypt;
 import ie.bitstep.mango.crypto.annotations.EncryptedBlob;
 import ie.bitstep.mango.crypto.annotations.EncryptionKeyId;
@@ -15,6 +16,8 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -23,12 +26,16 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import static java.lang.System.Logger.Level.ERROR;
+import static java.lang.System.Logger.Level.WARNING;
 import static java.util.Collections.emptyList;
 
 /**
  * Used to register an application's entities that contain encrypted fields.
  */
 public class AnnotatedEntityManager {
+
+	private static final System.Logger LOGGER = System.getLogger(AnnotatedEntityManager.class.getName());
 
 	private final Map<Class<?>, List<Field>> sourceEncryptedFields = new HashMap<>();
 	private final Map<Class<?>, List<Field>> allSourceConfidentialFields = new HashMap<>();
@@ -176,7 +183,14 @@ public class AnnotatedEntityManager {
 	private void registerFieldsToEncrypt(Class<?> annotatedEntityClass) {
 		List<Field> fieldsToEncrypt = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, Encrypt.class);
 		fieldsToEncrypt.forEach(field -> {
-			if (!Modifier.isTransient(field.getModifiers())) {
+
+			EnableMigrationSupport migrationSupport = field.getAnnotation(EnableMigrationSupport.class);
+
+			if (migrationSupport != null) {
+// Field has @EnableMigrationSupport, skip transient check and log warning/error
+				handleMigrationSupport(annotatedEntityClass, field, migrationSupport);
+			} else if (!Modifier.isTransient(field.getModifiers())) {
+// Field doesn't have @EnableMigrationSupport and is not transient - throw exception
 				throw new NonTransientCryptoException(String.format("%s has a field named %s marked with @%s but it is not transient. " +
 								"Please mark any fields annotated with @%s as transient",
 						annotatedEntityClass.getSimpleName(), field.getName(), Encrypt.class.getSimpleName(), Encrypt.class.getSimpleName()));
@@ -184,6 +198,36 @@ public class AnnotatedEntityManager {
 			field.setAccessible(true); // NOSONAR
 		});
 		sourceEncryptedFields.putIfAbsent(annotatedEntityClass, fieldsToEncrypt);
+	}
+
+	private void handleMigrationSupport(Class<?> annotatedEntityClass, Field field, EnableMigrationSupport migrationSupport) {
+		String completionByStr = migrationSupport.completedBy();
+		LocalDate completionByDate;
+
+		try {
+			completionByDate = LocalDate.parse(completionByStr);
+		} catch (DateTimeParseException e) {
+			throw new NonTransientCryptoException(String.format(
+					"Field %s.%s has @%s with invalid completedBy date format '%s'. Expected format: YYYY-MM-DD",
+					annotatedEntityClass.getSimpleName(), field.getName(),
+					EnableMigrationSupport.class.getSimpleName(), completionByStr), e);
+		}
+
+		LocalDate today = LocalDate.now();
+		String ticket = migrationSupport.ticket().isEmpty() ? "N/A" : migrationSupport.ticket();
+		String message = String.format(
+				"Field %s.%s is marked with @%s. Justification: %s. Expected completion: %s. Ticket: %s",
+				annotatedEntityClass.getSimpleName(), field.getName(),
+				EnableMigrationSupport.class.getSimpleName(), migrationSupport.justification(),
+				completionByStr, ticket);
+
+		if (today.isAfter(completionByDate)) {
+// After completion date - log ERROR
+			LOGGER.log(ERROR, message + " - MIGRATION DEADLINE HAS PASSED!");
+		} else {
+// Before completion date - log WARNING
+			LOGGER.log(WARNING, message);
+		}
 	}
 
 	private void registerEncryptedKeyIdField(Class<?> annotatedEntityClass) {

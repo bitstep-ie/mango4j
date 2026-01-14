@@ -26,6 +26,12 @@
             <artifactId>mango4j-crypto-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>ie.bitstep.mango</groupId>
+            <artifactId>mango4j-utils</artifactId>
+            <version>${project.version}</version>
+            <scope>compile</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -53,6 +59,10 @@
                         <!-- These classes are experimental for now (and complex) so not writing tests until it settles -->
                         <param>ie.bitstep.mango.crypto.keyrotation.RekeyScheduler</param>
                     </excludedClasses>
+                    <excludedMethods>
+                        <!-- Exclude logging-only method from mutation testing -->
+                        <param>handleMigrationSupport</param>
+                    </excludedMethods>
                 </configuration>
             </plugin>
             <plugin>

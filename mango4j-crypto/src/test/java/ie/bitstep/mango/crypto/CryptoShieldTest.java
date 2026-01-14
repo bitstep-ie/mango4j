@@ -28,6 +28,7 @@ import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.cascade.TestEnti
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.custom.NothingAnnotatedEntity;
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.list.TestAnnotatedEntityForListHmacFieldStrategy;
 import ie.bitstep.mango.crypto.testdata.implementations.hmacstrategies.MockHmacStrategyImpl;
+import ie.bitstep.mango.reflection.utils.ReflectionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
@@ -44,7 +44,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -75,12 +74,12 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class CryptoShieldTest {
 
+	public static final int TEST_POOL_SIZE = 10;
 	@Mock
 	private ObjectMapper mockedObjectMapper;
 
@@ -107,6 +106,9 @@ class CryptoShieldTest {
 
 	@Mock
 	private RetryConfiguration mockRetryConfiguration;
+
+	@Mock
+	ScheduledExecutorService mockScheduledExecutorService;
 
 	@Captor
 	private ArgumentCaptor<ObjectNode> objectNodeArgumentCaptor;
@@ -138,6 +140,7 @@ class CryptoShieldTest {
 	@Test
 	void constructor() {
 		given(mockObjectMapperFactory.objectMapper()).willReturn(mockedObjectMapper);
+		given(mockRetryConfiguration.poolSize()).willReturn(TEST_POOL_SIZE);
 		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory,
 				mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), mockRetryConfiguration);
 
@@ -268,14 +271,13 @@ class CryptoShieldTest {
 	}
 
 	private void overrideDirectlyInstantiatedFieldsWithMocks() {
-		try {
-			Field ciphertextFormatterField = cryptoShield.getClass().getDeclaredField("ciphertextFormatter");
-			ciphertextFormatterField.setAccessible(true);
-			ciphertextFormatterField.set(cryptoShield, mockCiphertextFormatter);
+		overrideFieldWithMock(cryptoShield, "ciphertextFormatter", mockCiphertextFormatter);
+		overrideFieldWithMock(cryptoShield, "encryptionService", mockEncryptionService);
+	}
 
-			Field encryptionServiceField = cryptoShield.getClass().getDeclaredField("encryptionService");
-			encryptionServiceField.setAccessible(true);
-			encryptionServiceField.set(cryptoShield, mockEncryptionService);
+	private void overrideFieldWithMock(CryptoShield cryptoShield, String fieldName, Object mock) {
+		try {
+			ReflectionUtils.forceSetField(cryptoShield, fieldName, mock);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -520,6 +522,37 @@ class CryptoShieldTest {
 	}
 
 	@Test
+	void encryptWithRetrySuccessOnFirstAttempt() throws JsonProcessingException {
+		given(mockObjectMapperFactory.objectMapper()).willReturn(mockedObjectMapper);
+		given(mockedObjectMapper.createObjectNode())
+				.willReturn(objectNode);
+		given(mockedObjectMapper.convertValue(TEST_PAN, JsonNode.class)).willReturn(new TextNode(TEST_PAN));
+		given(mockedObjectMapper.convertValue(TEST_USERNAME, JsonNode.class)).willReturn(new TextNode(TEST_USERNAME));
+		given(mockedObjectMapper.convertValue(TEST_ETHNICITY, JsonNode.class)).willReturn(new TextNode(TEST_ETHNICITY));
+		given(mockedObjectMapper.writeValueAsString(objectNodeArgumentCaptor.capture())).willReturn(TEST_MOCK_SOURCE_CIPHERTEXT);
+		given(mockCryptoKeyProvider.getCurrentEncryptionKey()).willReturn(TEST_CRYPTO_KEY);
+		given(mockEncryptionService.encrypt(TEST_CRYPTO_KEY, TEST_MOCK_SOURCE_CIPHERTEXT)).willReturn(TEST_CIPHERTEXT_CONTAINER);
+		given(mockCiphertextFormatter.format(TEST_CIPHERTEXT_CONTAINER)).willReturn(TEST_MOCK_ENCRYPTED_DATA);
+
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofMillis(200), 2);
+		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
+		overrideDirectlyInstantiatedFieldsWithMocks();
+
+		cryptoShield.encrypt(testEntity);
+
+		assertThat(testEntity.getEncryptionKeyId()).isEqualTo(TEST_CRYPTO_KEY_ID);
+		assertThat(testEntity.getEncryptedData()).isEqualTo(TEST_MOCK_ENCRYPTED_DATA);
+		assertThat(MockHmacStrategyImpl.entityPassedToHmac).isEqualTo(testEntity);
+		assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor).isInstanceOf(HmacStrategyHelper.class);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor.cryptoKeyProvider()).isEqualTo(mockCryptoKeyProvider);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor.encryptionService()).isInstanceOf(EncryptionService.class);
+		assertThat(objectNodeArgumentCaptor.getValue().get(TEST_ETHNICITY_FIELD_NAME).asText()).isEqualTo(TEST_ETHNICITY);
+
+		then(mockedObjectMapper).should(times(1)).createObjectNode();
+	}
+
+	@Test
 	void encryptWithRetrySuccessOnLastAttempt() throws JsonProcessingException {
 		given(mockObjectMapperFactory.objectMapper()).willReturn(mockedObjectMapper);
 		TransientCryptoException transientCryptoException = new TransientCryptoException("Test Transient Exception", new RuntimeException());
@@ -534,7 +567,7 @@ class CryptoShieldTest {
 		given(mockEncryptionService.encrypt(TEST_CRYPTO_KEY, TEST_MOCK_SOURCE_CIPHERTEXT)).willReturn(TEST_CIPHERTEXT_CONTAINER);
 		given(mockCiphertextFormatter.format(TEST_CIPHERTEXT_CONTAINER)).willReturn(TEST_MOCK_ENCRYPTED_DATA);
 
-		RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofMillis(200), 2);
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofMillis(200), 2);
 		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
 		overrideDirectlyInstantiatedFieldsWithMocks();
 
@@ -560,7 +593,7 @@ class CryptoShieldTest {
 				.willThrow(transientCryptoException);
 		given(mockCryptoKeyProvider.getCurrentEncryptionKey()).willReturn(TEST_CRYPTO_KEY);
 
-		RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofMillis(200), 2);
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofMillis(200), 2);
 		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
 		overrideDirectlyInstantiatedFieldsWithMocks();
 
@@ -582,32 +615,28 @@ class CryptoShieldTest {
 	void encryptWithRetryInterruptedExceptionDuringFirstAttempt() throws InterruptedException, ExecutionException {
 		given(mockObjectMapperFactory.objectMapper()).willReturn(mockedObjectMapper);
 
-		RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofSeconds(2), 2);
+		ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofSeconds(2), 2);
 		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
 		overrideDirectlyInstantiatedFieldsWithMocks();
+		overrideFieldWithMock(cryptoShield, "scheduler", mockScheduledExecutorService);
 
-		try (MockedStatic<Executors> mockedExecutors = mockStatic(Executors.class)) {
-			ScheduledExecutorService executorsMock = mock(ScheduledExecutorService.class);
-			mockedExecutors.when(Executors::newSingleThreadScheduledExecutor)
-					.thenReturn(executorsMock);
-			ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
-			given(mockedFuture.get()).willThrow(new InterruptedException());
-			given(executorsMock.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
+		given(mockedFuture.get()).willThrow(new InterruptedException());
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
 
-			assertThatThrownBy(() -> cryptoShield.encrypt(testEntity))
-					.isInstanceOf(NonTransientCryptoException.class)
-					.hasMessage("Thread was interrupted during retry backoff sleep");
-			assertThat(Thread.currentThread().isInterrupted()).isTrue();
+		assertThatThrownBy(() -> cryptoShield.encrypt(testEntity))
+				.isInstanceOf(NonTransientCryptoException.class)
+				.hasMessage("Thread was interrupted during retry backoff sleep");
+		assertThat(Thread.currentThread().isInterrupted()).isTrue();
 
-			assertThat(testEntity.getEncryptionKeyId()).isNull();
-			assertThat(testEntity.getEncryptedData()).isNull();
-			assertThat(MockHmacStrategyImpl.entityPassedToHmac).isNull();
-			assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
-			assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor).isInstanceOf(HmacStrategyHelper.class);
+		assertThat(testEntity.getEncryptionKeyId()).isNull();
+		assertThat(testEntity.getEncryptedData()).isNull();
+		assertThat(MockHmacStrategyImpl.entityPassedToHmac).isNull();
+		assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor).isInstanceOf(HmacStrategyHelper.class);
 
-			then(mockedObjectMapper).should(times(0)).createObjectNode();
-		}
+		then(mockedObjectMapper).should(times(0)).createObjectNode();
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
@@ -615,34 +644,30 @@ class CryptoShieldTest {
 	void encryptWithRetryExecutionExceptionDuringFirstAttempt() throws InterruptedException, ExecutionException {
 		given(mockObjectMapperFactory.objectMapper()).willReturn(mockedObjectMapper);
 
-		RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofSeconds(2), 2);
+		ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofSeconds(2), 2);
 		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
 		overrideDirectlyInstantiatedFieldsWithMocks();
+		overrideFieldWithMock(cryptoShield, "scheduler", mockScheduledExecutorService);
 
-		try (MockedStatic<Executors> mockedExecutors = mockStatic(Executors.class)) {
-			ScheduledExecutorService executorsMock = mock(ScheduledExecutorService.class);
-			mockedExecutors.when(Executors::newSingleThreadScheduledExecutor)
-					.thenReturn(executorsMock);
-			ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
-			Exception cause = new RuntimeException("Test Runtime Exception");
-			ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
-			given(mockedFuture.get()).willThrow(executionException);
-			given(executorsMock.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
+		Exception cause = new RuntimeException("Test Runtime Exception");
+		ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
+		given(mockedFuture.get()).willThrow(executionException);
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
 
-			assertThatThrownBy(() -> cryptoShield.encrypt(testEntity))
-					.isInstanceOf(NonTransientCryptoException.class)
-					.hasCause(cause)
-					.hasMessage("An error occurred during retry attempt");
+		assertThatThrownBy(() -> cryptoShield.encrypt(testEntity))
+				.isInstanceOf(NonTransientCryptoException.class)
+				.hasCause(cause)
+				.hasMessage("An error occurred during retry attempt");
 
-			assertThat(testEntity.getEncryptionKeyId()).isNull();
-			assertThat(testEntity.getEncryptedData()).isNull();
-			assertThat(MockHmacStrategyImpl.entityPassedToHmac).isNull();
-			assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
-			assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor).isInstanceOf(HmacStrategyHelper.class);
+		assertThat(testEntity.getEncryptionKeyId()).isNull();
+		assertThat(testEntity.getEncryptedData()).isNull();
+		assertThat(MockHmacStrategyImpl.entityPassedToHmac).isNull();
+		assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor).isInstanceOf(HmacStrategyHelper.class);
 
-			then(mockedObjectMapper).should(times(0)).createObjectNode();
-		}
+		then(mockedObjectMapper).should(times(0)).createObjectNode();
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
@@ -650,32 +675,28 @@ class CryptoShieldTest {
 	void encryptWithRetryNonTransientCryptoExceptionDuringFirstAttempt() throws InterruptedException, ExecutionException {
 		given(mockObjectMapperFactory.objectMapper()).willReturn(mockedObjectMapper);
 
-		RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofSeconds(2), 2);
+		ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofSeconds(2), 2);
 		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
 		overrideDirectlyInstantiatedFieldsWithMocks();
+		overrideFieldWithMock(cryptoShield, "scheduler", mockScheduledExecutorService);
 
-		try (MockedStatic<Executors> mockedExecutors = mockStatic(Executors.class)) {
-			ScheduledExecutorService executorsMock = mock(ScheduledExecutorService.class);
-			mockedExecutors.when(Executors::newSingleThreadScheduledExecutor)
-					.thenReturn(executorsMock);
-			ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
-			Exception cause = new NonTransientCryptoException("Test Non Transient Crypto Exception");
-			ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
-			given(mockedFuture.get()).willThrow(executionException);
-			given(executorsMock.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
+		Exception cause = new NonTransientCryptoException("Test Non Transient Crypto Exception");
+		ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
+		given(mockedFuture.get()).willThrow(executionException);
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
 
-			assertThatThrownBy(() -> cryptoShield.encrypt(testEntity))
-					.isEqualTo(cause);
+		assertThatThrownBy(() -> cryptoShield.encrypt(testEntity))
+				.isEqualTo(cause);
 
-			assertThat(testEntity.getEncryptionKeyId()).isNull();
-			assertThat(testEntity.getEncryptedData()).isNull();
-			assertThat(MockHmacStrategyImpl.entityPassedToHmac).isNull();
-			assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
-			assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor).isInstanceOf(HmacStrategyHelper.class);
+		assertThat(testEntity.getEncryptionKeyId()).isNull();
+		assertThat(testEntity.getEncryptedData()).isNull();
+		assertThat(MockHmacStrategyImpl.entityPassedToHmac).isNull();
+		assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor).isInstanceOf(HmacStrategyHelper.class);
 
-			then(mockedObjectMapper).should(times(0)).createObjectNode();
-		}
+		then(mockedObjectMapper).should(times(0)).createObjectNode();
 	}
 
 	@Test
@@ -846,10 +867,10 @@ class CryptoShieldTest {
 			e.setUserName(null);
 			e.setEthnicity(null);
 			e.setHighlyConfidentialObject(null);
-			return null; // this will cause the exception
+			return null;
 		}))
 				.isInstanceOf(NonTransientCryptoException.class)
-				.hasMessage("A NullPointerException error occurred trying to reset the original value of field: pan on type: TestMockHmacEntity");
+				.hasMessage("The supplied serialization function returned a null entity, so cannot reset source fields");
 
 		assertThat(MockHmacStrategyImpl.entityPassedToHmac).isEqualTo(testEntity);
 		assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
@@ -1011,7 +1032,7 @@ class CryptoShieldTest {
 		given(mockObjectNode.get(TEST_HIGHLY_CONFIDENTIAL_OBJECT_FIELD_NAME)).willReturn(highlyConfidentialObjectNode);
 		given(mockedObjectMapper.treeToValue(highlyConfidentialObjectNode, HighlyConfidentialObject.class)).willReturn(TEST_HIGHLY_CONFIDENTIAL_OBJECT);
 
-		RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofMillis(200), 2);
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofMillis(200), 2);
 		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
 		overrideDirectlyInstantiatedFieldsWithMocks();
 
@@ -1032,123 +1053,110 @@ class CryptoShieldTest {
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	@Test
 	void decryptWithRetryAllRetriesFailWithTransientException() throws ExecutionException, InterruptedException {
-		try (MockedStatic<Executors> mockedExecutors = mockStatic(Executors.class)) {
-			ScheduledExecutorService executorsMock = mock(ScheduledExecutorService.class);
-			mockedExecutors.when(Executors::newSingleThreadScheduledExecutor)
-					.thenReturn(executorsMock);
-			ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
-			TransientCryptoException cause = new TransientCryptoException("Test Transient Exception", new RuntimeException());
-			ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
-			given(mockedFuture.get()).willThrow(executionException);
-			given(executorsMock.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
-			given(executorsMock.schedule(any(Runnable.class), eq(200L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
-			given(executorsMock.schedule(any(Runnable.class), eq(600L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
+		ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
 
-			RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofMillis(200), 2);
-			cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
-			overrideDirectlyInstantiatedFieldsWithMocks();
+		TransientCryptoException cause = new TransientCryptoException("Test Transient Exception", new RuntimeException());
+		ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
+		given(mockedFuture.get()).willThrow(executionException);
 
-			assertThatThrownBy(() -> cryptoShield.decrypt(testEntity))
-					.isEqualTo(cause);
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(200L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(600L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
 
-			then(mockEncryptionService).shouldHaveNoInteractions();
-			then(mockObjectMapperFactory).should().objectMapper();
-			then(mockObjectMapperFactory).shouldHaveNoMoreInteractions();
-			then(mockedObjectMapper).shouldHaveNoInteractions();
-			then(mockObjectNode).shouldHaveNoInteractions();
-		}
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofMillis(200), 2);
+		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
+		overrideDirectlyInstantiatedFieldsWithMocks();
+		overrideFieldWithMock(cryptoShield, "scheduler", mockScheduledExecutorService);
+
+		assertThatThrownBy(() -> cryptoShield.decrypt(testEntity))
+				.isEqualTo(cause);
+
+		then(mockEncryptionService).shouldHaveNoInteractions();
+		then(mockObjectMapperFactory).should().objectMapper();
+		then(mockObjectMapperFactory).shouldHaveNoMoreInteractions();
+		then(mockedObjectMapper).shouldHaveNoInteractions();
+		then(mockObjectNode).shouldHaveNoInteractions();
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	@Test
 	void decryptWithRetryInterruptedExceptionDuringFirstAttempt() throws InterruptedException, ExecutionException {
-		try (MockedStatic<Executors> mockedExecutors = mockStatic(Executors.class)) {
-			ScheduledExecutorService executorsMock = mock(ScheduledExecutorService.class);
-			mockedExecutors.when(Executors::newSingleThreadScheduledExecutor)
-					.thenReturn(executorsMock);
-			ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
-			given(mockedFuture.get()).willThrow(new InterruptedException());
-			given(executorsMock.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
+		ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
+		given(mockedFuture.get()).willThrow(new InterruptedException());
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
 
-			RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofSeconds(2), 2);
-			cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
-			overrideDirectlyInstantiatedFieldsWithMocks();
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofSeconds(2), 2);
+		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
+		overrideDirectlyInstantiatedFieldsWithMocks();
+		overrideFieldWithMock(cryptoShield, "scheduler", mockScheduledExecutorService);
 
-			assertThatThrownBy(() -> cryptoShield.decrypt(testEntity))
-					.isInstanceOf(NonTransientCryptoException.class)
-					.hasMessage("Thread was interrupted during retry backoff sleep");
-			assertThat(Thread.currentThread().isInterrupted()).isTrue();
+		assertThatThrownBy(() -> cryptoShield.decrypt(testEntity))
+				.isInstanceOf(NonTransientCryptoException.class)
+				.hasMessage("Thread was interrupted during retry backoff sleep");
+		assertThat(Thread.currentThread().isInterrupted()).isTrue();
 
-			then(mockEncryptionService).shouldHaveNoInteractions();
-			then(mockObjectMapperFactory).should().objectMapper();
-			then(mockObjectMapperFactory).shouldHaveNoMoreInteractions();
-			then(mockedObjectMapper).shouldHaveNoInteractions();
-			then(mockObjectNode).shouldHaveNoInteractions();
-		}
+		then(mockEncryptionService).shouldHaveNoInteractions();
+		then(mockObjectMapperFactory).should().objectMapper();
+		then(mockObjectMapperFactory).shouldHaveNoMoreInteractions();
+		then(mockedObjectMapper).shouldHaveNoInteractions();
+		then(mockObjectNode).shouldHaveNoInteractions();
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	@Test
 	void decryptWithRetryExecutionExceptionDuringFirstAttempt() throws InterruptedException, ExecutionException {
-		try (MockedStatic<Executors> mockedExecutors = mockStatic(Executors.class)) {
-			ScheduledExecutorService executorsMock = mock(ScheduledExecutorService.class);
-			mockedExecutors.when(Executors::newSingleThreadScheduledExecutor)
-					.thenReturn(executorsMock);
-			ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
-			Exception cause = new RuntimeException("Test Runtime Exception");
-			ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
-			given(mockedFuture.get()).willThrow(executionException);
-			given(executorsMock.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
+		ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
+		Exception cause = new RuntimeException("Test Runtime Exception");
+		ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
+		given(mockedFuture.get()).willThrow(executionException);
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
 
-			RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofSeconds(2), 2);
-			cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
-			overrideDirectlyInstantiatedFieldsWithMocks();
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofSeconds(2), 2);
+		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
+		overrideDirectlyInstantiatedFieldsWithMocks();
+		overrideFieldWithMock(cryptoShield, "scheduler", mockScheduledExecutorService);
 
-			assertThatThrownBy(() -> cryptoShield.decrypt(testEntity))
-					.isInstanceOf(NonTransientCryptoException.class)
-					.hasMessage("An error occurred during retry attempt");
 
-			then(mockEncryptionService).shouldHaveNoInteractions();
-			then(mockObjectMapperFactory).should().objectMapper();
-			then(mockObjectMapperFactory).shouldHaveNoMoreInteractions();
-			then(mockedObjectMapper).shouldHaveNoInteractions();
-			then(mockObjectNode).shouldHaveNoInteractions();
-		}
+		assertThatThrownBy(() -> cryptoShield.decrypt(testEntity))
+				.isInstanceOf(NonTransientCryptoException.class)
+				.hasMessage("An error occurred during retry attempt");
+
+		then(mockEncryptionService).shouldHaveNoInteractions();
+		then(mockObjectMapperFactory).should().objectMapper();
+		then(mockObjectMapperFactory).shouldHaveNoMoreInteractions();
+		then(mockedObjectMapper).shouldHaveNoInteractions();
+		then(mockObjectNode).shouldHaveNoInteractions();
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	@Test
 	void decryptWithRetryNonTransientCryptoExceptionDuringFirstAttempt() throws InterruptedException, ExecutionException {
-		try (MockedStatic<Executors> mockedExecutors = mockStatic(Executors.class)) {
-			ScheduledExecutorService executorsMock = mock(ScheduledExecutorService.class);
-			mockedExecutors.when(Executors::newSingleThreadScheduledExecutor)
-					.thenReturn(executorsMock);
-			ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
-			given(executorsMock.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
-					.willReturn(mockedFuture);
-			Exception cause = new NonTransientCryptoException("Test Non Transient Crypto Exception");
-			ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
-			given(mockedFuture.get()).willThrow(executionException);
+		ScheduledFuture mockedFuture = mock(ScheduledFuture.class);
+		given(mockScheduledExecutorService.schedule(any(Runnable.class), eq(0L), eq(TimeUnit.MILLISECONDS)))
+				.willReturn(mockedFuture);
+		Exception cause = new NonTransientCryptoException("Test Non Transient Crypto Exception");
+		ExecutionException executionException = new ExecutionException("Test General Execution Exception", cause);
+		given(mockedFuture.get()).willThrow(executionException);
 
-			RetryConfiguration retryConfiguration = new RetryConfiguration(3, Duration.ofSeconds(2), 2);
-			cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
-			overrideDirectlyInstantiatedFieldsWithMocks();
+		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, 3, Duration.ofSeconds(2), 2);
+		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), retryConfiguration);
+		overrideDirectlyInstantiatedFieldsWithMocks();
+		overrideFieldWithMock(cryptoShield, "scheduler", mockScheduledExecutorService);
 
-			assertThatThrownBy(() -> cryptoShield.decrypt(testEntity))
-					.isInstanceOf(NonTransientCryptoException.class)
-					.hasMessage("Test Non Transient Crypto Exception");
+		assertThatThrownBy(() -> cryptoShield.decrypt(testEntity))
+				.isInstanceOf(NonTransientCryptoException.class)
+				.hasMessage("Test Non Transient Crypto Exception");
 
-			then(mockEncryptionService).shouldHaveNoInteractions();
-			then(mockObjectMapperFactory).should().objectMapper();
-			then(mockObjectMapperFactory).shouldHaveNoMoreInteractions();
-			then(mockedObjectMapper).shouldHaveNoInteractions();
-			then(mockObjectNode).shouldHaveNoInteractions();
-		}
+		then(mockEncryptionService).shouldHaveNoInteractions();
+		then(mockObjectMapperFactory).should().objectMapper();
+		then(mockObjectMapperFactory).shouldHaveNoMoreInteractions();
+		then(mockedObjectMapper).shouldHaveNoInteractions();
+		then(mockObjectNode).shouldHaveNoInteractions();
 	}
 
 	@Test
@@ -1602,10 +1610,11 @@ class CryptoShieldTest {
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void testBuilderBuildsCryptoShieldWithCorrectFieldsUsingReflection() {
+	void testBuilderBuildsCryptoShieldWithCorrectFieldsUsingReflection() {
 		given(mockObjectMapperFactory.objectMapper()).willReturn(mockedObjectMapper);
+		given(mockRetryConfiguration.poolSize()).willReturn(TEST_POOL_SIZE);
 
-		CryptoShield cryptoShield = new CryptoShield.Builder()
+		CryptoShield shield = new CryptoShield.Builder()
 				.withAnnotatedEntities(List.of(TestAnnotatedEntityForListHmacFieldStrategy.class))
 				.withObjectMapperFactory(mockObjectMapperFactory)
 				.withCryptoKeyProvider(mockCryptoKeyProvider)
@@ -1613,15 +1622,15 @@ class CryptoShieldTest {
 				.withRetryConfiguration(mockRetryConfiguration)
 				.build();
 
-		assertThat(getField(cryptoShield, "objectMapper")).isEqualTo(mockedObjectMapper);
-		assertThat(getField(cryptoShield, "cryptoKeyProvider")).isEqualTo(mockCryptoKeyProvider);
-		EncryptionService encryptionService = (EncryptionService) getField(cryptoShield, "encryptionService");
+		assertThat(getField(shield, "objectMapper")).isEqualTo(mockedObjectMapper);
+		assertThat(getField(shield, "cryptoKeyProvider")).isEqualTo(mockCryptoKeyProvider);
+		EncryptionService encryptionService = (EncryptionService) getField(shield, "encryptionService");
 		assertThat((Map<String, EncryptionServiceDelegate>) getField(encryptionService, "encryptionServiceDelegates")).containsValue(mockEncryptionServiceDelegate);
-		assertThat(getField(cryptoShield, "retryConfiguration")).isEqualTo(mockRetryConfiguration);
-		CiphertextFormatter ciphertextFormatter = (CiphertextFormatter) getField(cryptoShield, "ciphertextFormatter");
+		assertThat(getField(shield, "retryConfiguration")).isEqualTo(mockRetryConfiguration);
+		CiphertextFormatter ciphertextFormatter = (CiphertextFormatter) getField(shield, "ciphertextFormatter");
 		assertThat(getField(ciphertextFormatter, "objectMapperFactory")).isEqualTo(mockObjectMapperFactory);
 		assertThat(getField(ciphertextFormatter, "cryptoKeyProvider")).isEqualTo(mockCryptoKeyProvider);
-		assertThat(getField(cryptoShield, "annotatedEntityManager")).isInstanceOf(AnnotatedEntityManager.class);
+		assertThat(getField(shield, "annotatedEntityManager")).isInstanceOf(AnnotatedEntityManager.class);
 	}
 
 	// Helper method to access private fields via reflection

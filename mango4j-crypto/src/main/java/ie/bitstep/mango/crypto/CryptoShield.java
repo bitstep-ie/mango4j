@@ -20,6 +20,7 @@ import ie.bitstep.mango.crypto.core.factories.ObjectMapperFactory;
 import ie.bitstep.mango.crypto.core.formatters.CiphertextFormatter;
 import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
 import ie.bitstep.mango.crypto.hmac.HmacStrategy;
+import ie.bitstep.mango.utils.thread.NamedScheduledExecutorBuilder;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -48,13 +48,17 @@ import static java.lang.String.valueOf;
  * for this class to work.
  */
 public class CryptoShield {
+	private final System.Logger logger = System.getLogger(CryptoShield.class.getName());
 	protected final ObjectMapper objectMapper;
 	protected final AnnotatedEntityManager annotatedEntityManager;
 	protected final CiphertextFormatter ciphertextFormatter;
+	protected final ScheduledExecutorService scheduler;
 	private final CryptoKeyProvider cryptoKeyProvider;
 	private final EncryptionService encryptionService;
 	private final CryptoShieldDelegate cryptoShieldDelegate;
 	private final RetryConfiguration retryConfiguration;
+
+	public static final String A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S = "A %s error occurred trying to get the value of field: %s on type: %s";
 
 	public static class Builder {
 		private Collection<Class<?>> annotatedEntities;
@@ -110,6 +114,22 @@ public class CryptoShield {
 		this.encryptionService = new EncryptionService(encryptionServiceDelegates, ciphertextFormatter, objectMapperFactory);
 		this.annotatedEntityManager = new AnnotatedEntityManager(annotatedEntities, new HmacStrategyHelper(encryptionService, cryptoKeyProvider));
 		this.retryConfiguration = retryConfiguration;
+
+		if (this.retryConfiguration != null) {
+			this.scheduler =
+					NamedScheduledExecutorBuilder.builder()
+							.poolSize(retryConfiguration.poolSize())
+							.threadNamePrefix("crypto-retry-task")
+							.uncaughtExceptionHandler((t, e) ->
+// log or handle uncaught exceptions
+											logger.log(System.Logger.Level.ERROR, "Uncaught in {0}: {1}", t.getName(), e)
+							)
+							.removeOnCancelPolicy(true)
+							.build();
+		} else {
+			this.scheduler = null;
+		}
+
 		this.cryptoShieldDelegate = new CryptoShieldDelegate() {
 
 			@Override
@@ -176,7 +196,7 @@ public class CryptoShield {
 				originalValues.put(sourceField, sourceField.get(entity));
 			} catch (Exception e) {
 				throw new NonTransientCryptoException(
-						String.format("A %s error occurred trying to get the value of field: %s on type: %s", e.getClass().getSimpleName(), sourceField.getName(), entity.getClass().getSimpleName()),
+						String.format(A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S, e.getClass().getSimpleName(), sourceField.getName(), entity.getClass().getSimpleName()),
 						e
 				);
 			}
@@ -189,6 +209,10 @@ public class CryptoShield {
 	}
 
 	private <T> void resetSourceValues(T serializedEntity, Map<Field, Object> originalValues) {
+		if (serializedEntity == null) {
+			throw new NonTransientCryptoException("The supplied serialization function returned a null entity, so cannot reset source fields");
+		}
+
 		originalValues.forEach((sourceField, originalValue) -> {
 			try {
 				sourceField.set(serializedEntity, originalValue); // NOSONAR - java:S3011: This library revolves around reflection to set fields
@@ -221,22 +245,23 @@ public class CryptoShield {
 
 	private void retryableCommand(Runnable command) {
 		long backoffDelayInMilliseconds = 0;
+
 		for (int attempts = 1; attempts <= retryConfiguration.maxAttempts(); attempts++) {
 			try {
-				ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 				ScheduledFuture<?> future = scheduler.schedule(command, backoffDelayInMilliseconds, TimeUnit.MILLISECONDS);
 				future.get();
+				break;
 			} catch (InterruptedException interruptedException) {
 				Thread.currentThread().interrupt();
 				throw new NonTransientCryptoException("Thread was interrupted during retry backoff sleep", interruptedException);
 			} catch (ExecutionException ex) {
-				if (ex.getCause() instanceof TransientCryptoException) {
+				if (ex.getCause() instanceof TransientCryptoException cause) {
 					if (attempts == retryConfiguration.maxAttempts()) {
-						throw (TransientCryptoException) ex.getCause();
+						throw cause;
 					}
 					backoffDelayInMilliseconds = retryConfiguration.backoffDelay().toMillis() + (long) (backoffDelayInMilliseconds * retryConfiguration.backOffMultiplier());
-				} else if (ex.getCause() instanceof NonTransientCryptoException) {
-					throw (NonTransientCryptoException) ex.getCause();
+				} else if (ex.getCause() instanceof NonTransientCryptoException cause) {
+					throw cause;
 				} else {
 					throw new NonTransientCryptoException("An error occurred during retry attempt", ex.getCause());
 				}
@@ -266,8 +291,12 @@ public class CryptoShield {
 	}
 
 	public Collection<HmacHolder> generateHmacs(String sourceValue) {
+		return generateHmacs(sourceValue, null);
+	}
+
+	public Collection<HmacHolder> generateHmacs(String sourceValue, String name) {
 		List<HmacHolder> hmacHolders = cryptoKeyProvider.getCurrentHmacKeys().stream()
-				.map(cryptoKey -> new HmacHolder(cryptoKey, sourceValue))
+				.map(cryptoKey -> new HmacHolder(cryptoKey, sourceValue, name))
 				.toList();
 		encryptionService.hmac(hmacHolders);
 		return hmacHolders;
@@ -285,7 +314,7 @@ public class CryptoShield {
 	private void setEncryptedDataField(Object entity, CryptoShieldDelegate cryptoShieldDelegate) {
 		List<Field> encryptedFields = annotatedEntityManager.getFieldsToEncrypt(entity.getClass());
 		if (encryptedFields.isEmpty()) {
-			// maybe this entity only has HMACs
+// maybe this entity only has HMACs
 			return;
 		}
 
@@ -305,7 +334,7 @@ public class CryptoShield {
 					}
 				}
 			} catch (Exception e) {
-				throw new NonTransientCryptoException(String.format("A %s error occurred trying to get the value of field: %s on type: %s", e.getClass().getSimpleName(), sourceField.getName(), entity.getClass().getSimpleName()), e);
+				throw new NonTransientCryptoException(String.format(A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S, e.getClass().getSimpleName(), sourceField.getName(), entity.getClass().getSimpleName()), e);
 			}
 		});
 		try {
@@ -367,7 +396,7 @@ public class CryptoShield {
 							decrypt(cascadedField.get(entity));
 						}
 					} catch (Exception e) {
-						throw new NonTransientCryptoException(String.format("A %s error occurred trying to get the value of field: %s on type: %s", e.getClass().getSimpleName(), cascadedField.getName(), entity.getClass().getSimpleName()), e);
+						throw new NonTransientCryptoException(String.format(A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S, e.getClass().getSimpleName(), cascadedField.getName(), entity.getClass().getSimpleName()), e);
 					}
 				});
 	}
@@ -378,13 +407,13 @@ public class CryptoShield {
 	}
 
 	@SuppressWarnings({"java:S2209"})
-	// Sonar bug: incorrectly flags line as java:S2209. Thinks it's a static reference, no idea why.
+// Sonar bug: incorrectly flags line as java:S2209. Thinks it's a static reference, no idea why.
 	private void resetFieldsFromEncryptedData(Object entity) {
 		try {
 			List<Field> fieldsToEncrypt = annotatedEntityManager.getFieldsToEncrypt(entity.getClass());
 			if (fieldsToEncrypt.isEmpty()) {
-				// maybe this entity only has HMACs - revisit: should we throw an exception here to warn
-				// app that decrypt was called on an object that can't be decrypted?
+// maybe this entity only has HMACs - revisit: should we throw an exception here to warn
+// app that decrypt was called on an object that can't be decrypted?
 				return;
 			}
 

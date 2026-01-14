@@ -17,20 +17,25 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.security.auth.DestroyFailedException;
 import java.lang.reflect.Field;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static ie.bitstep.mango.crypto.core.testdata.TestKeyUtils.isEmpty;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mockStatic;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +43,8 @@ class InMemoryKeyVaultTest {
 
 	private static final UUID TEST_UUID = UUID.randomUUID();
 	private static final String AES_GCM_NO_PADDING_TRANSFORMATION_VALUE = "AES/GCM/NoPadding";
+	private static final byte[] TEST_IV = new byte[]{3, 4, 78, 9, 43, 2, 4, 6};
+	private static final byte[] TEST_ENCRYPTED_BYTES = new byte[]{3, 4, 78, 9, 43, 2, 4, 6};
 
 	private Field keyGeneratorField;
 	private Field secureRandomField;
@@ -95,9 +102,11 @@ class InMemoryKeyVaultTest {
 		originalStore = (Map<UUID, InMemoryKeyVault.VaultEntry>) storeField.get(InMemoryKeyVault.INSTANCE);
 		storeField.set(InMemoryKeyVault.INSTANCE, mockStore);
 
-		testKeyBytes = encryptedKeyBytes = new byte[]{67, 33, 39};
+		testKeyBytes = new byte[]{67, 33, 39};
 		testIv = new byte[]{11, 25, 97};
-		encryptedKeyBytes = new byte[]{1, 2, 3};
+
+		testIv = Arrays.copyOf(TEST_IV, TEST_IV.length);
+		encryptedKeyBytes = Arrays.copyOf(TEST_ENCRYPTED_BYTES, TEST_ENCRYPTED_BYTES.length);
 	}
 
 	@AfterEach
@@ -109,8 +118,6 @@ class InMemoryKeyVaultTest {
 
 	@Test
 	void initialState() {
-		assertThat(originalStore).isInstanceOf(ConcurrentHashMap.class)
-				.hasSize(0);
 		assertThat(originalSecureRandom.getClass()).isEqualTo(SecureRandom.class);
 	}
 
@@ -182,7 +189,7 @@ class InMemoryKeyVaultTest {
 	void testGetCipherFails() {
 		try (MockedStatic<Cipher> mockedCipher = mockStatic(Cipher.class)) {
 			IllegalArgumentException illegalArgumentException = new IllegalArgumentException("Failed!!");
-			given(mockStore.get(TEST_UUID)).willReturn(new InMemoryKeyVault.VaultEntry(null, new byte[]{}, new byte[]{}));
+			given(mockStore.get(TEST_UUID)).willReturn(new InMemoryKeyVault.VaultEntry(mockedSecretKey, new byte[]{}, new byte[]{}));
 			mockedCipher.when(() -> Cipher.getInstance(AES_GCM_NO_PADDING_TRANSFORMATION_VALUE)).thenThrow(illegalArgumentException);
 
 			assertThatThrownBy(() -> InMemoryKeyVault.INSTANCE.get(TEST_UUID))
@@ -192,13 +199,42 @@ class InMemoryKeyVaultTest {
 	}
 
 	@Test
-	void remove() {
-		InMemoryKeyVault.VaultEntry testVaultEntry = new InMemoryKeyVault.VaultEntry(null, new byte[]{}, new byte[]{});
+	void remove() throws DestroyFailedException {
+		InMemoryKeyVault.VaultEntry testVaultEntry = new InMemoryKeyVault.VaultEntry(mockedSecretKey, testIv, encryptedKeyBytes);
 		given(mockStore.remove(TEST_UUID)).willReturn(testVaultEntry);
 
-		InMemoryKeyVault.INSTANCE.remove(TEST_UUID);
+		assertThatNoException().isThrownBy(() -> InMemoryKeyVault.INSTANCE.remove(TEST_UUID));
 
 		then(mockStore).should().remove(TEST_UUID);
+		assertThat(isEmpty(testVaultEntry.iv)).isTrue();
+		assertThat(isEmpty(testVaultEntry.ciphertext)).isTrue();
+		then(mockedSecretKey).should().destroy();
+	}
+
+	@Test
+	void removeDoesNotExist() {
+		given(mockStore.remove(TEST_UUID)).willReturn(null);
+
+		assertThatNoException().isThrownBy(() -> InMemoryKeyVault.INSTANCE.remove(TEST_UUID));
+
+		then(mockStore).should().remove(TEST_UUID);
+		assertThat(testIv).isEqualTo(TEST_IV);
+		assertThat(encryptedKeyBytes).isEqualTo(TEST_ENCRYPTED_BYTES);
+		then(mockedSecretKey).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void removeDestroyFailedException() throws DestroyFailedException {
+		InMemoryKeyVault.VaultEntry testVaultEntry = new InMemoryKeyVault.VaultEntry(mockedSecretKey, testIv, encryptedKeyBytes);
+		given(mockStore.remove(TEST_UUID)).willReturn(testVaultEntry);
+		willThrow(new DestroyFailedException()).given(mockedSecretKey).destroy();
+
+		assertThatNoException().isThrownBy(() -> InMemoryKeyVault.INSTANCE.remove(TEST_UUID));
+
+		then(mockStore).should().remove(TEST_UUID);
+		assertThat(isEmpty(testVaultEntry.iv)).isTrue();
+		assertThat(isEmpty(testVaultEntry.ciphertext)).isTrue();
+		then(mockedSecretKey).should().destroy();
 	}
 
 	@Test

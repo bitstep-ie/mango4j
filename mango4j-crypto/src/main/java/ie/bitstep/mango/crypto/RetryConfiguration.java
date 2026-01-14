@@ -5,11 +5,15 @@ import java.time.Duration;
 import static java.lang.Math.round;
 import static java.lang.String.format;
 
-public record RetryConfiguration(int maxAttempts, Duration backoffDelay, float backOffMultiplier) {
+public record RetryConfiguration(int poolSize, int maxAttempts, Duration backoffDelay, float backOffMultiplier) {
 
 	public static final Duration DEFAULT_BACKOFF_DELAY = Duration.ofMillis(100);
 
 	public RetryConfiguration {
+		if (poolSize < 1) {
+			poolSize = 1;
+		}
+
 		if (maxAttempts < 1) {
 			throw new IllegalArgumentException(format("maxAttempts (%s) must be greater than 0", maxAttempts));
 		}

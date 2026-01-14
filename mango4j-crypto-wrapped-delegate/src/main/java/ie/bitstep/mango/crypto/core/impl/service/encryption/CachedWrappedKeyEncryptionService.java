@@ -7,6 +7,7 @@ import ie.bitstep.mango.crypto.core.domain.CryptoKey;
 import ie.bitstep.mango.crypto.core.domain.HmacHolder;
 import ie.bitstep.mango.crypto.core.encryption.EncryptionServiceDelegate;
 import ie.bitstep.mango.crypto.core.enums.WrappedCryptoKeyTypes;
+import ie.bitstep.mango.crypto.core.exceptions.KeyAlreadyDestroyedException;
 import ie.bitstep.mango.crypto.core.exceptions.NonTransientCryptoException;
 import ie.bitstep.mango.crypto.core.formatters.CiphertextFormatter;
 import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
@@ -14,9 +15,11 @@ import ie.bitstep.mango.crypto.core.utils.Generators;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import javax.security.auth.DestroyFailedException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.Map;
@@ -33,11 +36,19 @@ import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryp
 import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryptionConstants.GCM_TAG_LENGTH;
 import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryptionConstants.IV;
 import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryptionConstants.KEY_SIZE;
+import static java.lang.System.Logger.Level.DEBUG;
+import static java.lang.System.Logger.Level.INFO;
 import static javax.crypto.Cipher.DECRYPT_MODE;
 import static javax.crypto.Cipher.ENCRYPT_MODE;
 
-@SuppressWarnings("squid:S1192") // duplicate from from non-cached implementation
+@SuppressWarnings("squid:S1192") // duplicate from non-cached implementation
 public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate {
+
+	private static final System.Logger LOGGER = System.getLogger(CachedWrappedKeyEncryptionService.class.getName());
+	private static final Duration CACHED_KEYS_TTL = Duration.ofMinutes(15);
+	private static final Duration CURRENT_KEY_TTL = Duration.ofDays(1);
+	private static final Duration KEY_DESTRUCTION_GRACE_PERIOD = Duration.ofSeconds(5);
+	private static final Duration KEY_EVICTION_TASK_PERIOD = Duration.ofMinutes(1);
 
 	/**********************************************************************************
 	 * NOTE:
@@ -45,11 +56,14 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 	 * to allow configuration through Spring. This is safe and acceptable in a Spring
 	 * application since the class will typically be instantiated as a managed bean.
 	 *********************************************************************************/
-	private static final ConcurrentCache<String, CachedWrappedKeyHolder> CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE = new ConcurrentCache<>(
-			Duration.ofMillis(15),
-			Duration.ofDays(1),
-			Executors.newSingleThreadScheduledExecutor(),
-			Clock.systemUTC());
+	private static final ConcurrentCache<String, CachedWrappedKeyHolder> CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE =
+			new ConcurrentCache<>(
+					CACHED_KEYS_TTL,
+					CURRENT_KEY_TTL,
+					KEY_DESTRUCTION_GRACE_PERIOD,
+					KEY_EVICTION_TASK_PERIOD,
+					Executors.newSingleThreadScheduledExecutor(),
+					Clock.systemUTC());
 
 
 	private final CryptoKeyProvider cryptoKeyProvider;
@@ -59,18 +73,21 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 	public CachedWrappedKeyEncryptionService(
 			Duration entryTTL,
 			Duration currentEntryTTL,
+			Duration cacheGracePeriod,
 			CryptoKeyProvider cryptoKeyProvider,
 			CiphertextFormatter ciphertextFormatter) {
 		this.cryptoKeyProvider = cryptoKeyProvider;
 		this.ciphertextFormatter = ciphertextFormatter;
 		CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE.setCacheEntryTTL(entryTTL);
 		CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE.setCurrentEntryTTL(currentEntryTTL);
+		CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE.setCacheGracePeriod(cacheGracePeriod);
 	}
 
 	public CachedWrappedKeyEncryptionService(CryptoKeyProvider cryptoKeyProvider, CiphertextFormatter ciphertextFormatter) {
 		this(
-				Duration.ofSeconds(15),
-				Duration.ofDays(1),
+				CACHED_KEYS_TTL,
+				CURRENT_KEY_TTL,
+				KEY_DESTRUCTION_GRACE_PERIOD,
 				cryptoKeyProvider,
 				ciphertextFormatter
 		);
@@ -82,14 +99,25 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 			final CryptoKeyConfiguration cep = createConfigPojo(cryptoKey, CryptoKeyConfiguration.class);
 			final CipherConfig cipherConfig = CipherConfig.of(cep);
 			final var iv = Generators.generateIV(cep.ivSize());
-			final var wrappedKeyHolder = getCurrentWrappedKeyHolder(cep);
-			final var dek = generateDataEncryptionKey(wrappedKeyHolder.key(), cipherConfig);
+			var wrappedKeyHolder = getCurrentWrappedKeyHolder(cep);
+			byte[] key;
+			try {
+				key = wrappedKeyHolder.key();
+			} catch (KeyAlreadyDestroyedException e) {
+// race condition - just retry
+				LOGGER.log(INFO, "The current key has been destroyed since a reference to it was obtained, this can happen.....trying to get it again");
+				wrappedKeyHolder = getCurrentWrappedKeyHolder(cep);
+				key = wrappedKeyHolder.key();
+				LOGGER.log(INFO, "Got a new reference to it");
+			}
+			final var dek = generateDataEncryptionKey(key, cipherConfig);
 			final var cipher = CipherManager.getCipherInstance(cep.algorithm(), cep.mode(), cep.padding());
 
 			CipherManager.initCipher(ENCRYPT_MODE, cipherConfig, iv, cipher, dek);
 
 			final var encryptedBytes = cipher.doFinal(payload.getBytes(StandardCharsets.UTF_8));
 
+			destroyKey(dek, key);
 			return new CiphertextContainer(
 					cryptoKey,
 					Map.of(
@@ -107,6 +135,21 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		}
 	}
 
+	private static void destroyKey(SecretKey dek, byte[] keyBytes) {
+		try {
+			dek.destroy();
+		} catch (DestroyFailedException e) {
+			LOGGER.log(DEBUG, "Error occurred calling SecretKey.destroy(). This is common enough and happens because the SecretKey implementation doesn't support it");
+		}
+// CachedWrappedKeyHolder.key() returns a new key byte array each time
+// so we still need to blast away this key byte array once we're done with it
+		destroyKeyBytes(keyBytes);
+	}
+
+	private static void destroyKeyBytes(byte[] keyBytes) {
+		Arrays.fill(keyBytes, (byte) 0);
+	}
+
 	private CachedWrappedKeyHolder getCurrentWrappedKeyHolder(CryptoKeyConfiguration cep) {
 		synchronized (CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE) {
 			CachedWrappedKeyHolder cachedWrappedKeyHolder = CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE.getCurrent();
@@ -119,17 +162,19 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 	}
 
 	private CachedWrappedKeyHolder newCachedWrappedKeyHolder(CryptoKeyConfiguration cep) {
-		// Current key not set or expired, create a new one and set as current
+// Current key not set or expired, create a new one and set as current
 		final var keyId = UUID.randomUUID().toString();
 		final var dek = Generators.generateRandomBits(cep.keySize());
 		final var keyEncryptionKey = getWrappingKey(cep.keyEncryptionKey());
 
-		return CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE.putCurrent(keyId, new CachedWrappedKeyHolder(
+		CachedWrappedKeyHolder cachedWrappedKeyHolder = CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE.putCurrent(keyId, new CachedWrappedKeyHolder(
 						keyId,
 						dek,
 						super.encryptionService.encrypt(keyEncryptionKey, Base64.getEncoder().encodeToString(dek))
 				)
 		);
+		destroyKeyBytes(dek);
+		return cachedWrappedKeyHolder;
 	}
 
 	private CryptoKey getWrappingKey(String cryptoKeyId) {
@@ -143,18 +188,31 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 			final CipherConfig cipherConfig = CipherConfig.of(edc);
 			final var iv = Base64.getDecoder().decode(edc.iv());
 
-			final CachedWrappedKeyHolder cachedWrappedKeyHolder = getWrappedKeyHolder(
+			CachedWrappedKeyHolder cachedWrappedKeyHolder = getWrappedKeyHolder(
 					ciphertextContainer,
 					edc);
 
-			final var dek = new SecretKeySpec(cachedWrappedKeyHolder.key(), edc.algorithm().getAlgorithm());
+			byte[] key;
+			try {
+				key = cachedWrappedKeyHolder.key();
+			} catch (KeyAlreadyDestroyedException e) {
+// race condition - just retry
+				LOGGER.log(INFO, "The cached key has been destroyed since a reference to it was obtained, this can happen.....trying to get it again");
+				cachedWrappedKeyHolder = getWrappedKeyHolder(
+						ciphertextContainer,
+						edc);
+				key = cachedWrappedKeyHolder.key();
+				LOGGER.log(INFO, "Got a new reference to it");
+			}
+
+			final var dek = new SecretKeySpec(key, edc.algorithm().getAlgorithm());
 
 			final var cipher = CipherManager.getCipherInstance(CipherConfig.of(edc));
 
 			CipherManager.initCipher(DECRYPT_MODE, cipherConfig, iv, cipher, dek);
 
 			final var decryptedBytes = cipher.doFinal(Base64.getDecoder().decode(edc.cipherText()));
-
+			destroyKey(dek, key);
 			return new String(decryptedBytes, StandardCharsets.UTF_8);
 		} catch (Exception e) {
 			throw new NonTransientCryptoException(CONFIGURATION_ERROR, e);
@@ -169,7 +227,7 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 			if (cachedWrappedKeyHolder != null) {
 				return cachedWrappedKeyHolder;
 			} else {
-				// key not cached, create holder and put it in cache
+// key not cached, create holder and put it in cache
 				final var encodedKey = super.encryptionService.decrypt(edc.dataEncryptionKey());
 				final var decodedKey = Base64.getDecoder().decode(encodedKey.getBytes(StandardCharsets.UTF_8));
 
@@ -194,7 +252,7 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		return WrappedCryptoKeyTypes.CACHED_WRAPPED.getName();
 	}
 
-	static SecretKey generateDataEncryptionKey(final byte[] key, final CipherConfig cipherConfig) {
+	private static SecretKey generateDataEncryptionKey(final byte[] key, final CipherConfig cipherConfig) {
 		return new SecretKeySpec(key, cipherConfig.algorithm().getAlgorithm());
 	}
 }

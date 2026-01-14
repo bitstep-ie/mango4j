@@ -1,5 +1,6 @@
 package ie.bitstep.mango.crypto.core.domain;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import ie.bitstep.mango.crypto.core.encryption.EncryptionService;
 
 import java.util.Objects;
@@ -25,8 +26,8 @@ public final class HmacHolder {
 
 	/**
 	 * Optional value which can be set by applications. This is necessary to facilitate HMAC service implementations which
-	 * can call an external cryptographic providers batch HMAC call. i.e. Some cryptographic services offer an endpoint which accepts
-	 * multiple values to HMAC in the body so applications can calculate the HMACs for multiple values with a single call.
+	 * can call an external cryptographic providers batch HMAC call. i.e. Some cryptographic providers may offer operations which accept
+	 * multiple values to HMAC in the request so applications can calculate the HMACs for multiple values with a single call.
 	 * However, these
 	 * types of operations need each value to be accompanied by an associated alias for the value so that applications
 	 * can tell which HMAC values in the response correspond to which input values. It is encouraged that applications
@@ -67,8 +68,8 @@ public final class HmacHolder {
 		this(cryptoKey, valueToHmac, null);
 	}
 
-	public HmacHolder(CryptoKey cryptoKey, String valueToHmac, String hmacAlias) {
-		this(cryptoKey, valueToHmac, hmacAlias, null);
+	public HmacHolder(CryptoKey cryptoKey, String valueToHmac, String name) {
+		this(cryptoKey, valueToHmac, name, null);
 	}
 
 	public HmacHolder(CryptoKey cryptoKey, String valueToHmac, String hmacAlias, String tokenizedRepresentation) {
@@ -78,6 +79,7 @@ public final class HmacHolder {
 		this.tokenizedRepresentation = tokenizedRepresentation;
 	}
 
+	@JsonProperty("cryptoKey")
 	public CryptoKey getCryptoKey() {
 		return cryptoKey;
 	}
@@ -86,6 +88,7 @@ public final class HmacHolder {
 		this.cryptoKey = cryptoKey;
 	}
 
+	@JsonProperty("value")
 	public String getValue() {
 		return value;
 	}
@@ -94,10 +97,12 @@ public final class HmacHolder {
 		this.value = value;
 	}
 
+	@JsonProperty("hmacAlias")
 	public String getHmacAlias() {
 		return hmacAlias;
 	}
 
+	@JsonProperty("tokenizedRepresentation")
 	public String getTokenizedRepresentation() {
 		return tokenizedRepresentation;
 	}

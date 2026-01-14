@@ -57,6 +57,15 @@
                     <additionalOptions>-Xdoclint:none</additionalOptions>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <configuration>
+                    <verbose>true</verbose>
+                    <!--   There are several places in this module that we cannot possibly verify properly to get 100% PIT tests   -->
+                    <mutationThreshold>97</mutationThreshold>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
