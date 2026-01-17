@@ -19,4 +19,4 @@
 
 ## Documentation
 
-All the documentation can be found in `/docs` which on release, latest gets published to [confluence here](TBD) and a history of older versions can be found in this [confluence location](TBD).
+All the documentation can be found in `/docs` which on release, latest gets published to [here](TBD) and a history of older versions can be found in this [location](TBD).
