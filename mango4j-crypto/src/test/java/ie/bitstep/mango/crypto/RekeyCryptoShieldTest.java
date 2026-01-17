@@ -44,7 +44,6 @@ class RekeyCryptoShieldTest {
 		testEntity = new TestMockHmacEntity();
 	}
 
-	@SuppressWarnings("OptionalGetWithoutIsPresent")
 	@Test
 	void constructorNonListHmacStrategy() {
 		given(mockCryptoShield.getHmacStrategy(testEntity)).willReturn(Optional.of(mockHmacStrategy));
@@ -85,7 +84,7 @@ class RekeyCryptoShieldTest {
 
 	@Test
 	void encrypt() {
-		rekeyCryptoShield.protect(testEntity);
+		rekeyCryptoShield.encrypt(testEntity);
 
 		then(mockCryptoShield).should().encrypt(testEntity, getRekeyCryptoShieldDelegate());
 	}

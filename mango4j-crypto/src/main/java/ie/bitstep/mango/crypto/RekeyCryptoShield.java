@@ -27,8 +27,8 @@ public class RekeyCryptoShield {
 			public Optional<HmacStrategy> getHmacStrategy(Object entity) {
 				Optional<HmacStrategy> hmacStrategy = cryptoShield.getHmacStrategy(entity);
 				if (hmacStrategy.isPresent() &&
-					!currentHmacKeys.isEmpty() &&
-					hmacStrategy.get().getClass().isAssignableFrom(ListHmacFieldStrategy.class)) {
+						!currentHmacKeys.isEmpty() &&
+						hmacStrategy.get().getClass().isAssignableFrom(ListHmacFieldStrategy.class)) {
 					RekeyListHmacFieldStrategy rekeyListHmacFieldStrategy = new RekeyListHmacFieldStrategy((ListHmacFieldStrategy) hmacStrategy.get(), currentHmacKeys);
 					hmacStrategy = Optional.of(rekeyListHmacFieldStrategy);
 				}
@@ -41,7 +41,7 @@ public class RekeyCryptoShield {
 		cryptoShield.decrypt(entity);
 	}
 
-	public void protect(Object entity) {
+	public void encrypt(Object entity) {
 		cryptoShield.encrypt(entity, rekeyCryptoShieldDelegate);
 	}
 }

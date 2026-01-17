@@ -121,8 +121,8 @@ public class CryptoShield {
 							.poolSize(retryConfiguration.poolSize())
 							.threadNamePrefix("crypto-retry-task")
 							.uncaughtExceptionHandler((t, e) ->
-// log or handle uncaught exceptions
-											logger.log(System.Logger.Level.ERROR, "Uncaught in {0}: {1}", t.getName(), e)
+									// log or handle uncaught exceptions
+									logger.log(System.Logger.Level.ERROR, "Uncaught in {0}: {1}", t.getName(), e)
 							)
 							.removeOnCancelPolicy(true)
 							.build();
@@ -314,12 +314,19 @@ public class CryptoShield {
 	private void setEncryptedDataField(Object entity, CryptoShieldDelegate cryptoShieldDelegate) {
 		List<Field> encryptedFields = annotatedEntityManager.getFieldsToEncrypt(entity.getClass());
 		if (encryptedFields.isEmpty()) {
-// maybe this entity only has HMACs
+			// maybe this entity only has HMACs
 			return;
 		}
 
 		if (cryptoShieldDelegate.getCurrentEncryptionKey() == null) {
-			throw new ActiveEncryptionKeyNotFoundException();
+			// TODO: The delegate check is needed due to the fact that currently the rekey job (currently in BETA) does the
+			//  re-encrypt and re-HMAC operations separately so cryptoShieldDelegate.getCurrentEncryptionKey() returns null
+			//  here for the re-HMAC job which isn't a problem and we just return immediately cause there's no encryption to do.
+			if (cryptoShieldDelegate != this.cryptoShieldDelegate) {
+				return;
+			} else {
+				throw new ActiveEncryptionKeyNotFoundException();
+			}
 		}
 
 		ObjectNode rootNode = objectMapper.createObjectNode();
@@ -337,6 +344,7 @@ public class CryptoShield {
 				throw new NonTransientCryptoException(String.format(A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S, e.getClass().getSimpleName(), sourceField.getName(), entity.getClass().getSimpleName()), e);
 			}
 		});
+
 		try {
 			if (!rootNode.isEmpty()) {
 				String finalCipherText = ciphertextFormatter.format(doEncrypt(rootNode, cryptoShieldDelegate));
@@ -407,13 +415,13 @@ public class CryptoShield {
 	}
 
 	@SuppressWarnings({"java:S2209"})
-// Sonar bug: incorrectly flags line as java:S2209. Thinks it's a static reference, no idea why.
+	// Sonar bug: incorrectly flags line as java:S2209. Thinks it's a static reference, no idea why.
 	private void resetFieldsFromEncryptedData(Object entity) {
 		try {
 			List<Field> fieldsToEncrypt = annotatedEntityManager.getFieldsToEncrypt(entity.getClass());
 			if (fieldsToEncrypt.isEmpty()) {
-// maybe this entity only has HMACs - revisit: should we throw an exception here to warn
-// app that decrypt was called on an object that can't be decrypted?
+				// maybe this entity only has HMACs - revisit: should we throw an exception here to warn
+				// app that decrypt was called on an object that can't be decrypted?
 				return;
 			}
 

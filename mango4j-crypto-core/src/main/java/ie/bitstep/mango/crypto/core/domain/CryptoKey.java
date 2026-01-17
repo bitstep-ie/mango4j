@@ -90,6 +90,10 @@ public class CryptoKey {
 	 * Optional Field, only used for rekey functionality. This field can be left null. But if an
 	 * application needs to rekey records which use/do not use certain keys then this must be set to
 	 * the corresponding value.
+	 * <p>
+	 * <h4>NOTE: This and the {@link CryptoKey#lastModifiedDate} field are the only fields which should ever be updatable on a {@link CryptoKey}!!
+	 * All other fields should be considered read-only or data might be irreversibly corrupted/lost.</h4>
+	 * </P>
 	 */
 	private RekeyMode rekeyMode;
 
@@ -98,6 +102,19 @@ public class CryptoKey {
 	 * If this field is null on any {@link CryptoKey CryptoKeys} rekey functionality will not work.
 	 */
 	private Instant createdDate;
+
+	/**
+	 * Semi-Optional field. All HMAC {@link CryptoKey CryptoKeys} must set this value to a valid (immutable) date
+	 * when the key is marked as deleted.
+	 * If this field is not updated when a HMAC {@link CryptoKey CryptoKeys} is marked as deleted,
+	 * then the purge redundant HMACs functionality will not work for that key. This would leave useless HMACs in the system.
+	 * This wouldn't break anything but data should be kept clean.
+	 * <p>
+	 * <h4>NOTE: This and the {@link CryptoKey#rekeyMode} field are the only fields which should ever be updatable on a {@link CryptoKey}!!
+	 * All other fields should be considered read-only or data might be irreversibly corrupted/lost.</h4>
+	 * </P>
+	 */
+	private Instant lastModifiedDate;
 
 	public String getId() {
 		return id;
@@ -153,6 +170,14 @@ public class CryptoKey {
 
 	public void setCreatedDate(Instant createdDate) {
 		this.createdDate = createdDate;
+	}
+
+	public Instant getLastModifiedDate() {
+		return lastModifiedDate;
+	}
+
+	public void setLastModifiedDate(Instant lastModifiedDate) {
+		this.lastModifiedDate = lastModifiedDate;
 	}
 
 	/**

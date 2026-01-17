@@ -14,7 +14,10 @@ public interface RekeyService<T> {
 
 	void save(List<?> records);
 
+	@Deprecated(forRemoval = true)
 	void notify(ProgressTracker progressTracker);
+
+	void notify(RekeyEvent rekeyEvent);
 
 	void purgeRedundantHmacs(CryptoKey cryptoKey);
 }
