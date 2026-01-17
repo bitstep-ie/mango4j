@@ -26,6 +26,6 @@ mango4j is a general-purpose Java library that provides reusable utilities and s
 - [Rekeying decision flow](rekeying-decision-flow-diagram_v2.png)
 
 ## Documentation publishing
-All documentation in `/docs` is published to Confluence on release.
-- Latest: [Confluence link](TBD)
-- History: [Confluence archive](TBD)
+All documentation in `/docs` is published to documentation on release.
+- Latest: [documentation link](TBD)
+- History: [documentation archive](TBD)
