@@ -11,10 +11,16 @@ public class MDCTestUtils {
 			"mdcAdapter" // old name
 		};
 
+	/**
+	 * Prevents instantiation.
+	 */
 	private MDCTestUtils() {
 		// SONAR
 	}
 
+	/**
+	 * Initializes the MDC adapter for tests, supporting multiple field names.
+	 */
 	public static void init() {
 		for (String fieldName : MDC_ADAPTER) {
 			try {
@@ -25,6 +31,9 @@ public class MDCTestUtils {
 		}
 	}
 
+	/**
+	 * Clears the MDC adapter for tests.
+	 */
 	public static void cleanup() {
 		for (String fieldName : MDC_ADAPTER) {
 			try {
@@ -35,6 +44,11 @@ public class MDCTestUtils {
 		}
 	}
 
+	/**
+	 * Returns the current MDC adapter instance, if available.
+	 *
+	 * @return the adapter or null
+	 */
 	public static Object getMDCAdapter() {
 		Object response = null;
 

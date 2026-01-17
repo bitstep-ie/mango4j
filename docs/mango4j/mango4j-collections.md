@@ -1,26 +1,29 @@
 # mango4j-collections
 
-> Bitstep's common collections
-
 ## Overview
+Common collections utilities for map/list construction, map operations, reconciliation, and caching.
 
-Mango Collections provide useful algorithms and data structures library for Java applications.
+## Architecture
+- Builders: `MapBuilder` and `ListBuilder` for fluent construction.
+- Utilities: `MapUtils` for merge/replace/copy and path creation.
+- Reconciliation: `CollectionReconciler` for current vs desired collections.
+- Caching: `ConcurrentCache` with TTL and eviction support.
 
-## How to use?
-
-### Add the dependency
-
-```text language=text;title=Gradle Dependency;collapse=false;linenumbers=true;firstline=1
-implementation("ie.bitstep.mango:mango4j-collections:1.8.0")
+## How to use
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-collections:VERSION")
 ```
 
-```text language=text;title=Maven Dependency;collapse=false;linenumbers=true;firstline=1
-implementation("ie.bitstep.mango:mango4j-collections:1.8.0")
+### Maven
+```xml
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j-collections</artifactId>
-    <version>1.8.0</version>
+    <version>VERSION</version>
 </dependency>
 ```
 
-Happy coding!
+## More
+- [Documentation](mango4j-collections/documentation.md)
+- [Examples](mango4j-collections/examples.md)

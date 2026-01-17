@@ -21,10 +21,22 @@ import static java.time.Instant.now;
  */
 public final class SingleHmacFieldStrategyForTimeBasedCryptoKey extends SingleHmacFieldStrategy {
 
+	/**
+	 * Creates a time-based single HMAC strategy for the supplied entity class.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 * @param hmacStrategyHelper   helper used to compute HMACs
+	 */
 	public SingleHmacFieldStrategyForTimeBasedCryptoKey(Class<?> annotatedEntityClass, HmacStrategyHelper hmacStrategyHelper) {
 		super(annotatedEntityClass, hmacStrategyHelper);
 	}
 
+	/**
+	 * Selects the first HMAC key whose start time is in the past.
+	 *
+	 * @param currentHmacKeys the current HMAC keys
+	 * @return the active HMAC key
+	 */
 	@Override
 	protected CryptoKey getHmacKeyToUse(List<CryptoKey> currentHmacKeys) {
 		CryptoKey cryptoKeyToUse = null;

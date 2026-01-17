@@ -6,9 +6,21 @@ public final class MaskingUtils {
 
 	public static final int MINIMUM_LENGTH_OF_MASKING_AFFIXES = 0;
 
+	/**
+	 * Prevents instantiation.
+	 */
 	private MaskingUtils() { // NOSONAR
 	}
 
+	/**
+	 * Masks a value while preserving the specified prefix and suffix lengths.
+	 *
+	 * @param value the input value
+	 * @param maskingCharacters the masking characters to use
+	 * @param maskPrefixLength number of prefix characters to keep
+	 * @param maskSuffixLength number of suffix characters to keep
+	 * @return the masked value
+	 */
 	public static String mask(String value, String maskingCharacters, int maskPrefixLength, int maskSuffixLength) {
 		if (StringUtils.isEmpty(value)) {
 			return "";
@@ -23,6 +35,12 @@ public final class MaskingUtils {
 		return buildMaskedValue(value, maskingCharacters, maskPrefixLength, maskSuffixLength);
 	}
 
+	/**
+	 * Validates prefix and suffix lengths.
+	 *
+	 * @param maskPrefixLength prefix length
+	 * @param maskSuffixLength suffix length
+	 */
 	private static void validateAffixes(int maskPrefixLength, int maskSuffixLength) {
 		if (maskPrefixLength < MINIMUM_LENGTH_OF_MASKING_AFFIXES || maskSuffixLength < MINIMUM_LENGTH_OF_MASKING_AFFIXES) {
 			throw new IllegalArgumentException(String.format("maskPrefixLength and maskSuffixLength must be greater than %s.Supplied values were %s and %s respectively",
@@ -30,6 +48,15 @@ public final class MaskingUtils {
 		}
 	}
 
+	/**
+	 * Builds a masked value with preserved prefix and suffix.
+	 *
+	 * @param value the input value
+	 * @param maskingCharacters the masking characters to use
+	 * @param maskPrefixLength number of prefix characters to keep
+	 * @param maskSuffixLength number of suffix characters to keep
+	 * @return the masked value
+	 */
 	private static String buildMaskedValue(String value, String maskingCharacters, int maskPrefixLength, int maskSuffixLength) {
 		StringBuilder maskedValueBuilder = new StringBuilder();
 		for (int position = 0; position < value.length(); position++) {

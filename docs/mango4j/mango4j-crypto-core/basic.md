@@ -7,7 +7,7 @@ to [Ashley Waldron](mailto:ashley.waldron@gmail.com) and [John Allen.](mailto:jo
 
 This documentation is aimed at providing a general overview of implementing application level encryption (ALE) in your code. Most of the discussion here will focus on general
 challenges and only a small portion will talk about the actual library itself since the main library that is intended to be used by application developers is
-the [mango4j-crypto](/mango4j-crypto/basic.md) library (which is built on top of this). The contents in this document can be
+the [mango4j-crypto](mango4j-crypto/basic.md) library (which is built on top of this). The contents in this document can be
 used as a reference for developers who need to implement ALE regardless of whether they use this library (or the main mango4j-crypto library) or not. Developers should consider the
 guidelines documented in each section when building their own solutions.
 

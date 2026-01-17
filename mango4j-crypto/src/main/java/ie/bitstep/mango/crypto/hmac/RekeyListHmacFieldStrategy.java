@@ -18,11 +18,22 @@ public class RekeyListHmacFieldStrategy implements HmacStrategy, ListHmacFieldSt
 	private final ListHmacFieldStrategy wrappedListHmacFieldStrategy;
 	private final List<CryptoKey> currentHmacCryptoKeys;
 
+	/**
+	 * Wraps a {@link ListHmacFieldStrategy} for rekey-specific behavior.
+	 *
+	 * @param wrappedListHmacFieldStrategy the strategy to wrap
+	 * @param currentHmacCryptoKeys        the HMAC keys to use during rekeying
+	 */
 	public RekeyListHmacFieldStrategy(ListHmacFieldStrategy wrappedListHmacFieldStrategy, List<CryptoKey> currentHmacCryptoKeys) {
 		this.wrappedListHmacFieldStrategy = wrappedListHmacFieldStrategy;
 		this.currentHmacCryptoKeys = currentHmacCryptoKeys;
 	}
 
+	/**
+	 * Returns the HMAC keys to use during rekeying.
+	 *
+	 * @return current HMAC keys
+	 */
 	public List<CryptoKey> getCurrentHmacKeys() {
 		return currentHmacCryptoKeys;
 	}
@@ -105,6 +116,11 @@ public class RekeyListHmacFieldStrategy implements HmacStrategy, ListHmacFieldSt
 		}
 	}
 
+	/**
+	 * Calculates HMACs using the wrapped list strategy with rekey behavior enabled.
+	 *
+	 * @param entity the entity to process
+	 */
 	public void hmac(Object entity) {
 		wrappedListHmacFieldStrategy.hmac(entity, this);
 	}

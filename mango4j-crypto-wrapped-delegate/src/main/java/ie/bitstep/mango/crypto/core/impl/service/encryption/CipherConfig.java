@@ -20,6 +20,12 @@ public record CipherConfig(
 	Padding padding,
 	int gcmTagLength) {
 
+	/**
+	 * Creates a cipher config from a crypto key configuration.
+	 *
+	 * @param cep the crypto key configuration
+	 * @return the cipher config
+	 */
 	static CipherConfig of(CryptoKeyConfiguration cep) {
 		return new CipherConfig(
 			cep.algorithm(),
@@ -29,6 +35,12 @@ public record CipherConfig(
 		);
 	}
 
+	/**
+	 * Creates a cipher config from encrypted data configuration.
+	 *
+	 * @param edc the encrypted data configuration
+	 * @return the cipher config
+	 */
 	static CipherConfig of(EncryptedDataConfig edc) {
 		return new CipherConfig(
 			edc.algorithm(),

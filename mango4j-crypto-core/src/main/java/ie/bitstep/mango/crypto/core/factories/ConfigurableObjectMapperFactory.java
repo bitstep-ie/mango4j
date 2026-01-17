@@ -11,6 +11,11 @@ public class ConfigurableObjectMapperFactory implements ObjectMapperFactory {
 	private int maxStringLength = 20 * ONE_KILOBYTE;
 	private ObjectMapper instance;
 
+	/**
+	 * Returns an ObjectMapper configured with stream read constraints.
+	 *
+	 * @return the configured ObjectMapper
+	 */
 	public synchronized ObjectMapper objectMapper() {
 		if (instance == null) {
 			StreamReadConstraints constraints = StreamReadConstraints.builder()
@@ -28,10 +33,15 @@ public class ConfigurableObjectMapperFactory implements ObjectMapperFactory {
 		return instance;
 	}
 
+	/**
+	 * Sets the maximum string length and resets the mapper.
+	 *
+	 * @param maxStringLength the maximum string length in characters
+	 * @return this factory
+	 */
 	public synchronized ConfigurableObjectMapperFactory setMaxStringLength(int maxStringLength) {
 		this.maxStringLength = maxStringLength;
 		instance = null;
 		return this;
 	}
 }
-

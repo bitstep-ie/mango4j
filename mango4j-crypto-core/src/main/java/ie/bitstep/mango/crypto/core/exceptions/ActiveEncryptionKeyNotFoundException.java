@@ -7,6 +7,9 @@ import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
  * {@link CryptoKeyProvider CryptoKeyProvider} implementation
  */
 public class ActiveEncryptionKeyNotFoundException extends NonTransientCryptoException {
+	/**
+	 * Creates an exception when no active encryption key is found.
+	 */
 	public ActiveEncryptionKeyNotFoundException() {
 		super("No active encryption key was found");
 	}

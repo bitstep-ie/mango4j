@@ -42,6 +42,9 @@ public final class ConverterFactory {
 		}
 	}
 
+	/**
+	 * Prevents instantiation.
+	 */
 	private ConverterFactory() {
 		// NOSONAR
 	}

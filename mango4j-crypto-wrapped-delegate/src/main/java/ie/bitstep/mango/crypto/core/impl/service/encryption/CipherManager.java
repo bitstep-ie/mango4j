@@ -14,10 +14,24 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
 public class CipherManager {
+	/**
+	 * Prevents instantiation.
+	 */
 	private CipherManager() {
 		// NOSONAR
 	}
 
+	/**
+	 * Initializes a cipher with the configured parameters.
+	 *
+	 * @param encryptMode the cipher mode (encrypt/decrypt)
+	 * @param cep the cipher configuration
+	 * @param iv the initialization vector
+	 * @param cipher the cipher instance
+	 * @param dek the data encryption key
+	 * @throws InvalidKeyException when the key is invalid
+	 * @throws InvalidAlgorithmParameterException when parameters are invalid
+	 */
 	static void initCipher(int encryptMode, CipherConfig cep, byte[] iv, Cipher cipher, SecretKey dek) throws InvalidKeyException, InvalidAlgorithmParameterException {
 		switch (cep.mode()) {
 			case GCM -> {
@@ -35,10 +49,28 @@ public class CipherManager {
 		}
 	}
 
+	/**
+	 * Creates a cipher instance from algorithm parameters.
+	 *
+	 * @param algorithm the algorithm
+	 * @param mode the mode
+	 * @param padding the padding
+	 * @return the cipher instance
+	 * @throws NoSuchPaddingException when padding is not available
+	 * @throws NoSuchAlgorithmException when algorithm is not available
+	 */
 	static Cipher getCipherInstance(Algorithm algorithm, Mode mode, Padding padding) throws NoSuchPaddingException, NoSuchAlgorithmException {
 		return Cipher.getInstance(algorithm.getAlgorithm() + "/" + mode.getMode() + "/" + padding.getPadding());
 	}
 
+	/**
+	 * Creates a cipher instance from cipher configuration.
+	 *
+	 * @param cc the cipher configuration
+	 * @return the cipher instance
+	 * @throws NoSuchPaddingException when padding is not available
+	 * @throws NoSuchAlgorithmException when algorithm is not available
+	 */
 	static Cipher getCipherInstance(CipherConfig cc) throws NoSuchPaddingException, NoSuchAlgorithmException {
 		return getCipherInstance(cc.algorithm(), cc.mode(), cc.padding());
 	}

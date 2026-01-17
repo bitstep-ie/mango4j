@@ -1,6 +1,12 @@
 package ie.bitstep.mango.crypto.core.impl.service.encryption;
 
+/**
+ * Constants used by wrapped encryption implementations.
+ */
 public class WrappedEncryptionConstants {
+	/**
+	 * Prevents instantiation.
+	 */
 	private WrappedEncryptionConstants() {
 
 	}

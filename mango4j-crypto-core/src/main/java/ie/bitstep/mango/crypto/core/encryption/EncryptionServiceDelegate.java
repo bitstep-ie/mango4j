@@ -61,14 +61,35 @@ public abstract class EncryptionServiceDelegate {
 	 */
 	public abstract void hmac(Collection<HmacHolder> hmacHolders);
 
+	/**
+	 * Injects the parent service reference.
+	 *
+	 * @param encryptionService the service instance
+	 */
 	void setEncryptionServiceReference(EncryptionService encryptionService) {
 		this.encryptionService = encryptionService;
 	}
 
+	/**
+	 * Converts a key configuration into a typed POJO.
+	 *
+	 * @param cryptoKey the crypto key
+	 * @param c the target class
+	 * @param <T> the target type
+	 * @return the configuration POJO
+	 */
 	public <T> T createConfigPojo(final CryptoKey cryptoKey, Class<T> c) {
 		return createConfigPojo(cryptoKey.getConfiguration(), c);
 	}
 
+	/**
+	 * Converts a configuration map into a typed POJO.
+	 *
+	 * @param configMap the configuration map
+	 * @param c the target class
+	 * @param <T> the target type
+	 * @return the configuration POJO
+	 */
 	public <T> T createConfigPojo(final Map<String, Object> configMap, Class<T> c) {
 		return encryptionService.getObjectMapperFactory().objectMapper().convertValue(configMap, c);
 	}

@@ -1,13 +1,14 @@
 # mango4j-hibernate-proxy-resolver
 
-[Back to root README](../readme.md)
+## Overview
+Hibernate proxy resolver used with `ObjectMutator` to unwrap lazy proxies.
 
-Hibernate proxy resolver for `mango4j-utils` mutators.
+## How to use
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-hibernate-proxy-resolver:VERSION")
+```
 
-## Architecture
-- `HibernateProxyResolver` implements `ProxyResolver` and unwraps `HibernateProxy` instances before mutation.
-
-## Usage
 ### Maven
 ```xml
 <dependency>
@@ -15,11 +16,6 @@ Hibernate proxy resolver for `mango4j-utils` mutators.
     <artifactId>mango4j-hibernate-proxy-resolver</artifactId>
     <version>VERSION</version>
 </dependency>
-```
-
-### Gradle
-```gradle
-implementation("ie.bitstep.mango:mango4j-hibernate-proxy-resolver:VERSION")
 ```
 
 ## Example

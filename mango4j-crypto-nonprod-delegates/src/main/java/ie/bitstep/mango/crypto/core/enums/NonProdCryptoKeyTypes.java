@@ -8,6 +8,11 @@ public enum NonProdCryptoKeyTypes {
 	PBKDF2,
 	IDENTITY;
 
+	/**
+	 * Returns the enum name for this key type.
+	 *
+	 * @return the key type name
+	 */
 	public String getName() {
 		return this.name();
 	}

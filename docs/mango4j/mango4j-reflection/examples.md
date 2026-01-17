@@ -1,56 +1,29 @@
 # mango4j-reflection - Examples
 
-### Manipulate a property using a PropertyAccessor
+## Manipulate a property using a PropertyAccessor
+```java
+Profile profile = new Profile(...);
+PropertyAccessor<String> accessor = new PropertyAccessor<>(Profile.class, "firstName");
 
-```java language=java
-// create a profile instance
-Profile p = new Profile(...);
-
-// Create a property accessor for the "firstName" field in the Profile class
-PropertyAccessor<String> pa = new PropertyAccessor<>(Profile.class, "firstName");
-
-// Change the value of the field specified by the property accessor
-pa.
-
-set(p, "Fred");
-
-// print the value of the field specified by the property accessor
-System.out.
-
-println(pa.get(p));
+accessor.set(profile, "Fred");
+System.out.println(accessor.get(profile));
 ```
 
-### Get a cached PropertyAccessor
+## Get a cached PropertyAccessor
+```java
+Profile profile = new Profile(...);
+PropertyAccessor<String> accessor = ReflectionUtils
+    .getClassInfo(Profile.class)
+    .getPropertyAccessor("firstName");
 
-```java language=java
-// create a profile instance
-Profile p = new Profile(...);
-
-PropertyAccessor<String> pa = ReflectionUtils.getClassInfo(Profile.class).getPropertyAccessor("firstName");
-
-// Change the value of the field specified by the property accessor
-pa.
-
-set(p, "Fred");
-
-// print the value of the field specified by the property accessor
-System.out.
-
-println(pa.get(p));
+accessor.set(profile, "Fred");
+System.out.println(accessor.get(profile));
 ```
 
-### Manipulate a property using the ReflectionUtils class
+## Manipulate a property using ReflectionUtils
+```java
+Profile profile = new Profile(...);
 
-```java language=java
-// create a profile instance
-Profile p = new Profile(...);
-
-		ReflectionUtils.
-
-setField(p, "firstName","Fred");
-
-// print the value of the field specified by the property accessor
-System.out.
-
-println(ReflectionUtils.getField(p, "firstName"));
+ReflectionUtils.setField(profile, "firstName", "Fred");
+System.out.println(ReflectionUtils.getField(profile, "firstName"));
 ```

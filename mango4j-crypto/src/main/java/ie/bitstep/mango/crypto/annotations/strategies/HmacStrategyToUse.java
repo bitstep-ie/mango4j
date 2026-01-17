@@ -19,5 +19,10 @@ import java.lang.annotation.Target;
 @Target({ElementType.TYPE})
 public @interface HmacStrategyToUse {
 
+	/**
+	 * Specifies the HMAC strategy class to use.
+	 *
+	 * @return the strategy class
+	 */
 	Class<? extends HmacStrategy> value();
 }

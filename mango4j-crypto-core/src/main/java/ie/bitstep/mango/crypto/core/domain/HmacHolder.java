@@ -64,14 +64,35 @@ public final class HmacHolder {
 	 */
 	private final String tokenizedRepresentation;
 
+	/**
+	 * Creates a holder with a key and value.
+	 *
+	 * @param cryptoKey the crypto key
+	 * @param valueToHmac the value to HMAC
+	 */
 	public HmacHolder(CryptoKey cryptoKey, String valueToHmac) {
 		this(cryptoKey, valueToHmac, null);
 	}
 
+	/**
+	 * Creates a holder with a key, value, and alias.
+	 *
+	 * @param cryptoKey the crypto key
+	 * @param valueToHmac the value to HMAC
+	 * @param name the alias for the value
+	 */
 	public HmacHolder(CryptoKey cryptoKey, String valueToHmac, String name) {
 		this(cryptoKey, valueToHmac, name, null);
 	}
 
+	/**
+	 * Creates a holder with key, value, alias, and tokenized representation.
+	 *
+	 * @param cryptoKey the crypto key
+	 * @param valueToHmac the value to HMAC
+	 * @param hmacAlias the alias for the value
+	 * @param tokenizedRepresentation the tokenized representation label
+	 */
 	public HmacHolder(CryptoKey cryptoKey, String valueToHmac, String hmacAlias, String tokenizedRepresentation) {
 		this.cryptoKey = cryptoKey;
 		this.value = valueToHmac;
@@ -79,34 +100,70 @@ public final class HmacHolder {
 		this.tokenizedRepresentation = tokenizedRepresentation;
 	}
 
+	/**
+	 * Returns the crypto key used for this holder.
+	 *
+	 * @return the crypto key
+	 */
 	@JsonProperty("cryptoKey")
 	public CryptoKey getCryptoKey() {
 		return cryptoKey;
 	}
 
+	/**
+	 * Sets the crypto key for this holder.
+	 *
+	 * @param cryptoKey the crypto key
+	 */
 	public void setCryptoKey(CryptoKey cryptoKey) {
 		this.cryptoKey = cryptoKey;
 	}
 
+	/**
+	 * Returns the value to HMAC (or the computed HMAC after processing).
+	 *
+	 * @return the value
+	 */
 	@JsonProperty("value")
 	public String getValue() {
 		return value;
 	}
 
+	/**
+	 * Sets the value to HMAC (or stores a computed HMAC).
+	 *
+	 * @param value the value to set
+	 */
 	public void setValue(String value) {
 		this.value = value;
 	}
 
+	/**
+	 * Returns the HMAC alias, if any.
+	 *
+	 * @return the alias
+	 */
 	@JsonProperty("hmacAlias")
 	public String getHmacAlias() {
 		return hmacAlias;
 	}
 
+	/**
+	 * Returns the tokenized representation label, if any.
+	 *
+	 * @return the tokenized representation label
+	 */
 	@JsonProperty("tokenizedRepresentation")
 	public String getTokenizedRepresentation() {
 		return tokenizedRepresentation;
 	}
 
+	/**
+	 * Compares holders by key ID, value, alias, and representation.
+	 *
+	 * @param o the other object
+	 * @return true when equal
+	 */
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
@@ -115,6 +172,11 @@ public final class HmacHolder {
 		return Objects.equals(cryptoKey.getId(), that.cryptoKey.getId()) && Objects.equals(value, that.value) && Objects.equals(hmacAlias, that.hmacAlias) && Objects.equals(tokenizedRepresentation, that.tokenizedRepresentation);
 	}
 
+	/**
+	 * Returns the hash code for this holder.
+	 *
+	 * @return the hash code
+	 */
 	@Override
 	public int hashCode() {
 		return Objects.hash(cryptoKey, value, hmacAlias, tokenizedRepresentation);

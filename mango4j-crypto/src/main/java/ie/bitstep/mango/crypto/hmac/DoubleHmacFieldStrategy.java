@@ -57,11 +57,22 @@ public class DoubleHmacFieldStrategy implements HmacStrategy {
 	private final Map<Field, List<Field>> entityHmacFields = new HashMap<>();
 	private final HmacStrategyHelper hmacStrategyHelper;
 
+	/**
+	 * Creates a double-HMAC strategy for the supplied entity class.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 * @param hmacStrategyHelper   helper used to compute HMACs
+	 */
 	public DoubleHmacFieldStrategy(Class<?> annotatedEntityClass, HmacStrategyHelper hmacStrategyHelper) {
 		this.hmacStrategyHelper = hmacStrategyHelper;
 		this.register(annotatedEntityClass);
 	}
 
+	/**
+	 * Registers source and target HMAC fields for the entity class.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 */
 	private void register(Class<?> annotatedEntityClass) {
 		List<Field> allFields = List.of(annotatedEntityClass.getDeclaredFields());
 		List<Field> hmacSourceFields = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, Hmac.class);
@@ -81,6 +92,11 @@ public class DoubleHmacFieldStrategy implements HmacStrategy {
 		});
 	}
 
+	/**
+	 * Calculates HMAC values for all configured fields and sets the corresponding HMAC targets.
+	 *
+	 * @param entity the entity to process
+	 */
 	@Override
 	public void hmac(Object entity) {
 		for (Map.Entry<Field, List<Field>> entry : entityHmacFields.entrySet()) {

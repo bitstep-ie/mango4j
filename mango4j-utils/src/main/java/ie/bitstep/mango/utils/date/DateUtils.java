@@ -162,6 +162,13 @@ public class DateUtils {
 		return getEndOfMonth(Calendar.getInstance(tz));
 	}
 
+	/**
+	 * Parses a date string using registered formats and returns an instant in UTC.
+	 *
+	 * @param dateString the input date string
+	 * @return the parsed instant in UTC
+	 * @throws InvalidDateFormatException when no format matches
+	 */
 	public Instant getDateInUTC(String dateString) throws InvalidDateFormatException {
 		for (String format : dateFormats.keySet()) {
 			try {

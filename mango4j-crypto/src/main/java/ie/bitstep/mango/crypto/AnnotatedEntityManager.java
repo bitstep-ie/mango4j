@@ -50,7 +50,7 @@ public class AnnotatedEntityManager {
 	 * default {@link DoubleHmacFieldStrategy} HMAC strategy for the entity type.
 	 *
 	 * @param annotatedEntityClasses Application's entity class.
-	 * @param hmacStrategyHelper
+	 * @param hmacStrategyHelper     helper used to build HMAC strategies
 	 */
 	public AnnotatedEntityManager(Collection<Class<?>> annotatedEntityClasses, HmacStrategyHelper hmacStrategyHelper) {
 		if (annotatedEntityClasses == null || annotatedEntityClasses.isEmpty() || annotatedEntityClasses.stream().anyMatch(Objects::isNull)) {
@@ -67,6 +67,9 @@ public class AnnotatedEntityManager {
 		validateCascadeEncryptFields();
 	}
 
+	/**
+	 * Validates that cascade-encrypted fields reference registered and encryptable types.
+	 */
 	private void validateCascadeEncryptFields() {
 		sourceFieldsToCascadeEncrypt.values().stream().flatMap(Collection::stream).forEach(cascadedField -> {
 			List<Field> encryptedFields = ReflectionUtils.getFieldsByAnnotation(cascadedField.getType(), Encrypt.class);
@@ -86,6 +89,11 @@ public class AnnotatedEntityManager {
 		});
 	}
 
+	/**
+	 * Registers fields annotated with {@link CascadeEncrypt} for the given entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to scan
+	 */
 	private void registerFieldsToCascadeEncrypt(Class<?> annotatedEntityClass) {
 		List<Field> fieldsToCascadeEncrypt = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, CascadeEncrypt.class);
 		if (fieldsToCascadeEncrypt.isEmpty()) {
@@ -105,6 +113,11 @@ public class AnnotatedEntityManager {
 		});
 	}
 
+	/**
+	 * Registers all fields that carry confidential data (encrypt + hmac) for the entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to scan
+	 */
 	private void registerAllConfidentialFields(Class<?> annotatedEntityClass) {
 		allSourceConfidentialFields.put(annotatedEntityClass, new ArrayList<>(sourceEncryptedFields.getOrDefault(annotatedEntityClass, new ArrayList<>())));
 		ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, Hmac.class)
@@ -120,6 +133,12 @@ public class AnnotatedEntityManager {
 		}
 	}
 
+	/**
+	 * Registers the HMAC strategy for an entity if it has {@link Hmac}-annotated fields.
+	 *
+	 * @param annotatedEntityClass the entity class to scan
+	 * @param hmacStrategyHelper   helper used to build HMAC strategies
+	 */
 	private void registerHmacStrategy(Class<?> annotatedEntityClass, HmacStrategyHelper hmacStrategyHelper) {
 		List<Field> hmacSourceFields = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, Hmac.class);
 		if (hmacSourceFields.isEmpty()) {
@@ -130,6 +149,13 @@ public class AnnotatedEntityManager {
 		applicationConfidentialEntitiesHmacStrategies.putIfAbsent(annotatedEntityClass, hmacStrategy);
 	}
 
+	/**
+	 * Instantiates the configured HMAC strategy for an entity class.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 * @param hmacStrategyHelper   helper used to construct the strategy
+	 * @return the HMAC strategy instance
+	 */
 	private HmacStrategy createHmacStrategyInstance(Class<?> annotatedEntityClass, HmacStrategyHelper hmacStrategyHelper) {
 		HmacStrategyToUse hmacStrategyToUse = getHmacStrategyToUse(annotatedEntityClass);
 		HmacStrategy hmacStrategyInstance;
@@ -145,6 +171,12 @@ public class AnnotatedEntityManager {
 		return hmacStrategyInstance;
 	}
 
+	/**
+	 * Resolves the {@link HmacStrategyToUse} annotation for a class or its meta-annotations.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 * @return the resolved {@link HmacStrategyToUse} annotation
+	 */
 	private HmacStrategyToUse getHmacStrategyToUse(Class<?> annotatedEntityClass) {
 		Annotation[] annotations = annotatedEntityClass.getAnnotations();
 		for (Annotation annotation : annotations) {
@@ -164,6 +196,11 @@ public class AnnotatedEntityManager {
 				"the %2$s class.", HmacStrategyToUse.class.getSimpleName(), annotatedEntityClass.getSimpleName(), Hmac.class.getSimpleName()));
 	}
 
+	/**
+	 * Registers the field annotated with {@link EncryptedBlob} for the entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to scan
+	 */
 	private void registerEncryptedDataField(Class<?> annotatedEntityClass) {
 		List<Field> encryptedDataSourceFields = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, Encrypt.class);
 		if (encryptedDataSourceFields.isEmpty()) {
@@ -180,6 +217,11 @@ public class AnnotatedEntityManager {
 		applicationEncryptedDataFields.putIfAbsent(annotatedEntityClass, encryptedDataField.get(0));
 	}
 
+	/**
+	 * Registers fields annotated with {@link Encrypt} for the entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to scan
+	 */
 	private void registerFieldsToEncrypt(Class<?> annotatedEntityClass) {
 		List<Field> fieldsToEncrypt = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, Encrypt.class);
 		fieldsToEncrypt.forEach(field -> {
@@ -200,6 +242,13 @@ public class AnnotatedEntityManager {
 		sourceEncryptedFields.putIfAbsent(annotatedEntityClass, fieldsToEncrypt);
 	}
 
+	/**
+	 * Handles {@link EnableMigrationSupport} for non-transient fields and logs the status.
+	 *
+	 * @param annotatedEntityClass the entity class that owns the field
+	 * @param field                the field annotated with migration support
+	 * @param migrationSupport     the migration support annotation
+	 */
 	private void handleMigrationSupport(Class<?> annotatedEntityClass, Field field, EnableMigrationSupport migrationSupport) {
 		String completionByStr = migrationSupport.completedBy();
 		LocalDate completionByDate;
@@ -230,6 +279,11 @@ public class AnnotatedEntityManager {
 		}
 	}
 
+	/**
+	 * Registers the field annotated with {@link EncryptionKeyId} for the entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to scan
+	 */
 	private void registerEncryptedKeyIdField(Class<?> annotatedEntityClass) {
 		List<Field> encryptionKeyIdFields = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, EncryptionKeyId.class);
 		if (encryptionKeyIdFields.isEmpty()) {
@@ -251,26 +305,62 @@ public class AnnotatedEntityManager {
 		applicationEncryptedKeyIdFields.putIfAbsent(annotatedEntityClass, encryptionKeyIdFields.get(0));
 	}
 
+	/**
+	 * Returns fields marked with {@link Encrypt} for the entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to look up
+	 * @return the list of fields to encrypt
+	 */
 	public List<Field> getFieldsToEncrypt(Class<?> annotatedEntityClass) {
 		return sourceEncryptedFields.getOrDefault(annotatedEntityClass, emptyList());
 	}
 
+	/**
+	 * Returns all confidential fields (encrypt + hmac) for the entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to look up
+	 * @return the list of confidential fields
+	 */
 	public List<Field> getAllConfidentialFields(Class<?> annotatedEntityClass) {
 		return allSourceConfidentialFields.getOrDefault(annotatedEntityClass, emptyList());
 	}
 
+	/**
+	 * Returns the field annotated with {@link EncryptedBlob} for the entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to look up
+	 * @return the encrypted blob field
+	 */
 	public Field getEncryptedDataField(Class<?> annotatedEntityClass) {
 		return applicationEncryptedDataFields.get(annotatedEntityClass);
 	}
 
+	/**
+	 * Returns the field annotated with {@link EncryptionKeyId}, if present.
+	 *
+	 * @param annotatedEntityClass the entity class to look up
+	 * @return optional encryption key id field
+	 */
 	public Optional<Field> getEncryptionKeyIdField(Class<?> annotatedEntityClass) {
 		return Optional.ofNullable(applicationEncryptedKeyIdFields.get(annotatedEntityClass));
 	}
 
+	/**
+	 * Returns the configured {@link HmacStrategy} for the entity type, if present.
+	 *
+	 * @param annotatedEntityClass the entity class to look up
+	 * @return optional HMAC strategy
+	 */
 	public Optional<HmacStrategy> getHmacStrategy(Class<?> annotatedEntityClass) {
 		return Optional.ofNullable(applicationConfidentialEntitiesHmacStrategies.get(annotatedEntityClass));
 	}
 
+	/**
+	 * Returns fields annotated with {@link CascadeEncrypt} for the entity type.
+	 *
+	 * @param annotatedEntityClass the entity class to look up
+	 * @return the cascade-encrypted fields
+	 */
 	public Collection<Field> getFieldsToCascadeEncrypt(Class<?> annotatedEntityClass) {
 		return sourceFieldsToCascadeEncrypt.getOrDefault(annotatedEntityClass, emptyList());
 	}

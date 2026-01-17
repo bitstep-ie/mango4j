@@ -13,15 +13,29 @@ public final class UUIDv7 {
 	private final Clock clock;
 	private final SecureRandom random;
 
+	/**
+	 * Creates a UUIDv7 generator using the system UTC clock.
+	 */
 	public UUIDv7() {
 		this(Clock.systemUTC(), new SecureRandom());
 	}
 
+	/**
+	 * Creates a UUIDv7 generator with the supplied clock and random source.
+	 *
+	 * @param clock the clock to use
+	 * @param random the random source
+	 */
 	public UUIDv7(Clock clock, SecureRandom random) {
 		this.clock = clock;
 		this.random = random;
 	}
 
+	/**
+	 * Generates a time-ordered UUIDv7.
+	 *
+	 * @return the generated UUID
+	 */
 	public UUID generate() {
 		long unixMillis = clock.millis();
 

@@ -12,10 +12,19 @@ import static java.lang.String.format;
 
 public final class FieldValidator {
 
+	/**
+	 * Utility class for validating HMAC field definitions.
+	 */
 	private FieldValidator() { // NOSONAR
 		// SONAR, add private constructor
 	}
 
+	/**
+	 * Validates that a source field is a valid HMAC source field.
+	 *
+	 * @param hmacSourceField       the field to validate
+	 * @param annotatedEntityClass  the entity class that owns the field
+	 */
 	static void validateSourceHmacField(Field hmacSourceField, Class<?> annotatedEntityClass) {
 		if (!Modifier.isTransient(hmacSourceField.getModifiers())) {
 			throw new NonTransientCryptoException(format("%s has a field named %s marked with @%s but it is not transient. " +
