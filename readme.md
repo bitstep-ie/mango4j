@@ -19,4 +19,4 @@
 
 ## Documentation
 
-All the documentation can be found in `/docs` which on release, latest gets published to [here](TBD) and a history of older versions can be found in this [location](TBD).
+All documentation can be found in [here](/docs). For each release, it's version specific documentation gets published [here](TBD) and a history of older versions can be found [here](TBD).
