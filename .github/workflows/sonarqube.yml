@@ -49,4 +49,6 @@ jobs:
             # mandatory
             -Dsonar.projectKey=bitstep-ie_mango4j
             -Dsonar.organization=bitstep-ie
-            -Dsonar.coverageReportPaths=/target/site/jacoco-aggregate/jacoco.xml
+            -Dsonar.sources=src/main/java
+            -Dsonar.binaries=target/classes
+            -Dsonar.coverageReportPaths=target/site/jacoco-aggregate/jacoco.xml
