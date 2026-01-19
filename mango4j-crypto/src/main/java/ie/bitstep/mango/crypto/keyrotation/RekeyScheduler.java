@@ -447,10 +447,10 @@ public class RekeyScheduler {
 					}
 				}
 			} else {
+				// TODO: Update to find records which are using the KEY_OFF key but not all the keys after that
 				tenantHmacKeysSortedByDateDescending.stream()
 						.filter(hmacKey -> hmacKey.getRekeyMode() == KEY_OFF)
-						.findFirst()
-						.ifPresent(deprecatedHmacKey -> {
+						.forEach(deprecatedHmacKey -> {
 							RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(cryptoShield, null,
 									getHmacKeysToRekeyTo(tenantAllCryptoKeysSortedByDateDescending));
 							long totalHmacRecordsRekeyedForThisKey = rekey(deprecatedHmacKey, rekeyCryptoShield, keyOffRecordSupplier(deprecatedHmacKey));

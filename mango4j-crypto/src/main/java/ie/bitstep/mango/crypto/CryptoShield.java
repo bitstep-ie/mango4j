@@ -154,16 +154,8 @@ public class CryptoShield {
 	 * @param entity Your annotated (and registered) entity
 	 */
 	public void encrypt(Object entity) {
-		if (entity instanceof Collection<?> collection) {
-			collection.forEach(e -> encrypt(e, cryptoShieldDelegate));
-		} else if (entity != null && entity.getClass().isArray()) {
-			if (!Object.class.isAssignableFrom(entity.getClass().getComponentType())) {
-				throw new NonTransientCryptoException(String.format("encrypt() method doesn't support arrays of primitive types (%s)", entity.getClass().componentType()));
-			}
-			Arrays.stream((Object[]) entity).forEach(e -> encrypt(e, cryptoShieldDelegate));
-		} else {
-			encrypt(entity, cryptoShieldDelegate);
-		}
+		// Do NOT add another line to this public method unless you know what you're doing!!!
+		encrypt(entity, cryptoShieldDelegate);
 	}
 
 	/**
@@ -234,6 +226,16 @@ public class CryptoShield {
 	void encrypt(Object entity, CryptoShieldDelegate cryptoShieldDelegate) {
 		if (entity == null) {
 			return;
+		}
+
+		// recursive block just in case a collection/array was passed
+		if (entity instanceof Collection<?> collection) {
+			collection.forEach(e -> encrypt(e, cryptoShieldDelegate));
+		} else if (entity.getClass().isArray()) {
+			if (!Object.class.isAssignableFrom(entity.getClass().getComponentType())) {
+				throw new NonTransientCryptoException(String.format("encrypt() method doesn't support arrays of primitive types (%s)", entity.getClass().componentType()));
+			}
+			Arrays.stream((Object[]) entity).forEach(e -> encrypt(e, cryptoShieldDelegate));
 		}
 
 		if (retryConfiguration == null) {
@@ -322,6 +324,7 @@ public class CryptoShield {
 			// TODO: The delegate check is needed due to the fact that currently the rekey job (currently in BETA) does the
 			//  re-encrypt and re-HMAC operations separately so cryptoShieldDelegate.getCurrentEncryptionKey() returns null
 			//  here for the re-HMAC job which isn't a problem and we just return immediately cause there's no encryption to do.
+			//  This all needs removed when the rekey stuff is refactored.
 			if (cryptoShieldDelegate != this.cryptoShieldDelegate) {
 				return;
 			} else {
@@ -420,7 +423,7 @@ public class CryptoShield {
 		try {
 			List<Field> fieldsToEncrypt = annotatedEntityManager.getFieldsToEncrypt(entity.getClass());
 			if (fieldsToEncrypt.isEmpty()) {
-				// maybe this entity only has HMACs - revisit: should we throw an exception here to warn
+				// TODO: maybe this entity only has HMACs - revisit: should we throw an exception here to warn
 				// app that decrypt was called on an object that can't be decrypted?
 				return;
 			}
