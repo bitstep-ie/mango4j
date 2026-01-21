@@ -11,7 +11,7 @@ permissions:
   pull-requests: read # allows SonarQube to decorate PRs with analysis results
 
 jobs:
-  Build:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,8 +30,9 @@ jobs:
       - name: Update dependency graph
         uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
 
-  Scan:
+  scan:
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - name: Analyze with SonarQube
         uses: SonarSource/sonarqube-scan-action@v7.0.0
@@ -46,6 +47,5 @@ jobs:
             # mandatory
             -Dsonar.projectKey=bitstep-ie_mango4j
             -Dsonar.organization=bitstep-ie
-            -Dsonar.sources=src/main/java
-            -Dsonar.binaries=target/classes
             -Dsonar.coverageReportPaths=**/target/jacoco/jacoco.xml
+            -Dsonar.java.binaries=**/target/classes
