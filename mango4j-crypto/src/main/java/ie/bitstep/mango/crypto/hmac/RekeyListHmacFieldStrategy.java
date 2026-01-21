@@ -16,15 +16,15 @@ import java.util.function.Predicate;
 public class RekeyListHmacFieldStrategy implements HmacStrategy, ListHmacFieldStrategyDelegate {
 
 	private final ListHmacFieldStrategy wrappedListHmacFieldStrategy;
-	private final List<CryptoKey> currentHmacCryptoKeys;
+	private final CryptoKey currentHmacCryptoKeys;
 
-	public RekeyListHmacFieldStrategy(ListHmacFieldStrategy wrappedListHmacFieldStrategy, List<CryptoKey> currentHmacCryptoKeys) {
+	public RekeyListHmacFieldStrategy(ListHmacFieldStrategy wrappedListHmacFieldStrategy, CryptoKey currentHmacCryptoKeys) {
 		this.wrappedListHmacFieldStrategy = wrappedListHmacFieldStrategy;
 		this.currentHmacCryptoKeys = currentHmacCryptoKeys;
 	}
 
 	public List<CryptoKey> getCurrentHmacKeys() {
-		return currentHmacCryptoKeys;
+		return List.of(currentHmacCryptoKeys);
 	}
 
 	/**
