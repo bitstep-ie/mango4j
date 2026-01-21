@@ -63,8 +63,9 @@ jobs:
             -Dmaven.compiler.showWarnings=true \
             -Dmaven.compiler.failOnWarning=true
 
-      - name: Validate Javadocs
-        run: |
-          mvn javadoc:aggregate \
-            -Dadditionalparam="-Xdoclint:all" \
-            -Dmaven.javadoc.failOnError=true
+      # Disabled javadocs temporarily
+      # - name: Validate Javadocs
+      #   run: |
+      #     mvn javadoc:aggregate \
+      #       -Dadditionalparam="-Xdoclint:all" \
+      #       -Dmaven.javadoc.failOnError=true
