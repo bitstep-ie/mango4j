@@ -65,6 +65,6 @@ jobs:
 
       - name: Validate Javadocs
         run: |
-          mvn javadoc:javadoc \
+          mvn javadoc:aggregate \
             -Dadditionalparam="-Xdoclint:all" \
             -Dmaven.javadoc.failOnError=true
