@@ -59,9 +59,13 @@ jobs:
           cache: maven
 
       - name: Validate compilation (fail on warnings)
-        run: mvn compile -Dmaven.compiler.showWarnings=true -Dmaven.compiler.failOnWarning=true
+        run: | 
+          mvn compile \
+            -Dmaven.compiler.showWarnings=true \
+            -Dmaven.compiler.failOnWarning=true
 
       - name: Validate Javadocs
-        run: mvn javadoc:javadoc \
-          -Dadditionalparam="-Xdoclint:all" \
-          -Dmaven.javadoc.failOnError=true
+        run: |
+          mvn javadoc:javadoc \
+            -Dadditionalparam="-Xdoclint:all" \
+            -Dmaven.javadoc.failOnError=true
