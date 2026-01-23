@@ -16,6 +16,7 @@ public @interface Converter {
 	/**
 	 * Specify the converter
 	 *
+	 * @return the converter implementation class
 	 */
 	Class<? extends UnaryOperator<Object>> converter() default NoConverter.class;
 }

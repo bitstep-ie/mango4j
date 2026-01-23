@@ -18,5 +18,10 @@ package ie.bitstep.mango.crypto.hmac;
  */
 @FunctionalInterface
 public interface HmacStrategy {
+	/**
+	 * Calculates HMACs for the supplied entity.
+	 *
+	 * @param entity the entity to process
+	 */
 	void hmac(Object entity);
 }

@@ -9,10 +9,21 @@ import ie.bitstep.mango.crypto.core.encryption.EncryptionServiceDelegate;
  */
 public class NonTransientCryptoException extends RuntimeException {
 
+	/**
+	 * Creates an exception with a message and cause.
+	 *
+	 * @param message the error message
+	 * @param cause the underlying cause
+	 */
 	public NonTransientCryptoException(String message, Throwable cause) {
 		super(message, cause);
 	}
 
+	/**
+	 * Creates an exception with a message.
+	 *
+	 * @param message the error message
+	 */
 	public NonTransientCryptoException(String message) {
 		super(message);
 	}

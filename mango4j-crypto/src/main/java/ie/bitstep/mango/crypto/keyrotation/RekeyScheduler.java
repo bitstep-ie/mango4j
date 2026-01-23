@@ -57,12 +57,16 @@ public class RekeyScheduler {
 	private TimeUnit rekeyTimeUnits;
 	private CryptoShield cryptoShield;
 
+	/**
+	 * Creates a rekey scheduler with default settings.
+	 */
 	public RekeyScheduler() {
 	}
 
 	/**
 	 * Mandatory method. The usual {@link CryptoKeyProvider} implementation used by your application
 	 *
+	 * @param cryptoShield the crypto shield instance to use
 	 * @return this
 	 */
 	public RekeyScheduler withCryptoShield(CryptoShield cryptoShield) {
@@ -193,6 +197,9 @@ public class RekeyScheduler {
 		scheduler.scheduleAtFixedRate(this::rekeyTenants, initialDelay, rekeyCheckInterval, rekeyTimeUnits);
 	}
 
+	/**
+	 * Rekeys tenants based on their configured crypto keys.
+	 */
 	private void rekeyTenants() {
 		Map<String, List<CryptoKey>> allEncryptionKeys = new HashMap<>();
 		for (CryptoKey cryptoKey : cryptoShield.getCryptoKeyProvider().getAllCryptoKeys()) {
@@ -208,6 +215,12 @@ public class RekeyScheduler {
 		}
 	}
 
+	/**
+	 * Rekeys a single tenant based on its crypto keys.
+	 *
+	 * @param tenantId the tenant ID
+	 * @param tenantCryptoKeys the tenant's crypto keys
+	 */
 	private void rekeyTenant(String tenantId, List<CryptoKey> tenantCryptoKeys) {
 		if (tenantCryptoKeys.size() <= 1) {
 			logger.log(ERROR, "There are no Crypto Keys defined{0}", tenantLogString(tenantId));
@@ -236,6 +249,12 @@ public class RekeyScheduler {
 		}
 	}
 
+	/**
+	 * Rekeys encryption data for a tenant.
+	 *
+	 * @param tenantId the tenant ID
+	 * @param tenantAllCryptoKeysSortedByDateDescending all tenant keys sorted by date
+	 */
 	private void reEncrypt(String tenantId, List<CryptoKey> tenantAllCryptoKeysSortedByDateDescending) {
 		List<CryptoKey> tenantEncryptionKeysSortedByDateDescending = tenantAllCryptoKeysSortedByDateDescending.stream()
 			.filter(cryptoKey -> cryptoKey.getUsage() == CryptoKeyUsage.ENCRYPTION)
@@ -281,10 +300,22 @@ public class RekeyScheduler {
 		}
 	}
 
+	/**
+	 * Returns a formatted tenant log suffix.
+	 *
+	 * @param tenantId the tenant ID
+	 * @return the formatted suffix
+	 */
 	private static String tenantLogString(String tenantId) {
 		return tenantId == null ? "" : " for tenant " + tenantId;
 	}
 
+	/**
+	 * Removes deprecated encryption keys not in use.
+	 *
+	 * @param tenantEncryptionKeysSortedByDateDescending encryption keys sorted by date
+	 * @param tenantCurrentEncryptionKey the current encryption key
+	 */
 	private void removeUnusedEncryptionKeys(List<CryptoKey> tenantEncryptionKeysSortedByDateDescending, CryptoKey tenantCurrentEncryptionKey) {
 		if (tenantEncryptionKeysSortedByDateDescending.size() > 1) {
 			for (CryptoKey tenantEncryptionKey : tenantEncryptionKeysSortedByDateDescending) {
@@ -296,6 +327,11 @@ public class RekeyScheduler {
 		}
 	}
 
+	/**
+	 * Rekeys HMAC values for a tenant.
+	 *
+	 * @param tenantAllCryptoKeysSortedByDateDescending all tenant keys sorted by date
+	 */
 	private void reHmac(List<CryptoKey> tenantAllCryptoKeysSortedByDateDescending) {
 		List<CryptoKey> tenantHmacKeysSortedByDateDescending = getTenantHmacKeysSortedByDateDescending(tenantAllCryptoKeysSortedByDateDescending);
 		if (tenantHmacKeysSortedByDateDescending.isEmpty()) {
@@ -332,10 +368,23 @@ public class RekeyScheduler {
 		}
 	}
 
+	/**
+	 * Checks whether a deprecated HMAC key can be removed.
+	 *
+	 * @param tenantHmacKeysSortedByDateDescending HMAC keys sorted by date
+	 * @param i the index of the key
+	 * @return true when the key can be removed
+	 */
 	private boolean canBeRemoved(List<CryptoKey> tenantHmacKeysSortedByDateDescending, int i) {
 		return tenantHmacKeysSortedByDateDescending.get(i).getCreatedDate().plus(cryptoKeyCacheDuration).isBefore(now());
 	}
 
+	/**
+	 * Determines whether any encrypted records require rekeying.
+	 *
+	 * @param recordsNeedingRekeyedFunction record supplier
+	 * @return true if any records require rekeying
+	 */
 	private boolean doAnyEncryptedRecordsNeedRekeying(Function<RekeyService<?>, List<?>> recordsNeedingRekeyedFunction) {
 		List<?> recordsNeedingRekeyed;
 		boolean doAnyRecordsNeedRekeying = false;
@@ -353,6 +402,12 @@ public class RekeyScheduler {
 		return doAnyRecordsNeedRekeying;
 	}
 
+	/**
+	 * Determines whether any HMAC records require rekeying.
+	 *
+	 * @param tenantHmacKeys the tenant HMAC keys
+	 * @return true if any records require rekeying
+	 */
 	private boolean doAnyRecordsWithHmacsNeedRekeying(List<CryptoKey> tenantHmacKeys) {
 		boolean doAnyRecordsNeedRekeying = false;
 		for (CryptoKey tenantHmacKey : tenantHmacKeys) {
@@ -379,6 +434,13 @@ public class RekeyScheduler {
 		return doAnyRecordsNeedRekeying;
 	}
 
+	/**
+	 * Retrieves records using the supplied function.
+	 *
+	 * @param rekeyService the rekey service
+	 * @param recordsNeedingRekeyedFunction record supplier
+	 * @return the records to rekey
+	 */
 	private List<?> getRecords(RekeyService<?> rekeyService, Function<RekeyService<?>, List<?>> recordsNeedingRekeyedFunction) {
 		List<?> recordsNeedingRekeyed = null;
 		try {
@@ -389,6 +451,12 @@ public class RekeyScheduler {
 		return recordsNeedingRekeyed;
 	}
 
+	/**
+	 * Returns the HMAC keys to rekey to.
+	 *
+	 * @param tenantAllCryptoKeysSortedByDateDescending all tenant keys sorted by date
+	 * @return HMAC keys to rekey to
+	 */
 	private List<CryptoKey> getHmacKeysToRekeyTo(List<CryptoKey> tenantAllCryptoKeysSortedByDateDescending) {
 		List<CryptoKey> tenantHmacKeysSortedByDateDescending = getTenantHmacKeysSortedByDateDescending(tenantAllCryptoKeysSortedByDateDescending);
 		if (tenantHmacKeysSortedByDateDescending.isEmpty()) {
@@ -415,20 +483,45 @@ public class RekeyScheduler {
 		return tenantHmacKeysToRekeyTo;
 	}
 
+	/**
+	 * Returns tenant HMAC keys sorted by date.
+	 *
+	 * @param tenantAllCryptoKeysSortedByDateDescending all tenant keys sorted by date
+	 * @return HMAC keys sorted by date
+	 */
 	private static List<CryptoKey> getTenantHmacKeysSortedByDateDescending(List<CryptoKey> tenantAllCryptoKeysSortedByDateDescending) {
 		return tenantAllCryptoKeysSortedByDateDescending.stream()
 			.filter(cryptoKey -> cryptoKey.getUsage() == CryptoKeyUsage.HMAC)
 			.toList();
 	}
 
+	/**
+	 * Supplies records that need to be keyed on to the provided key.
+	 *
+	 * @param cryptoKey the target key
+	 * @return the record supplier
+	 */
 	private static Function<RekeyService<?>, List<?>> keyOnRecordSupplier(CryptoKey cryptoKey) {
 		return (rekeyService) -> rekeyService.findRecordsNotUsingCryptoKey(cryptoKey);
 	}
 
+	/**
+	 * Supplies records that need to be keyed off the provided key.
+	 *
+	 * @param cryptoKey the deprecated key
+	 * @return the record supplier
+	 */
 	private static Function<RekeyService<?>, List<?>> keyOffRecordSupplier(CryptoKey cryptoKey) {
 		return (rekeyService) -> rekeyService.findRecordsUsingCryptoKey(cryptoKey);
 	}
 
+	/**
+	 * Executes rekey operations for all configured services.
+	 *
+	 * @param cryptoKey the crypto key being rekeyed
+	 * @param rekeyCryptoShield the rekey shield
+	 * @param recordsSupplier the records supplier
+	 */
 	@SuppressWarnings("BusyWait")
 	private void rekey(CryptoKey cryptoKey, RekeyCryptoShield rekeyCryptoShield, Function<RekeyService<?>, List<?>> recordsSupplier) {
 		logger.log(DEBUG, "Running re-key job. Keying {0} CryptoKey: {1}",
@@ -459,7 +552,14 @@ public class RekeyScheduler {
 	}
 
 	/**
-	 * @return true if there were no records in this batch to process, meaning that we're finished re-keying this entity. False otherwise.
+	 * Processes a single batch of records for an entity.
+	 *
+	 * @param entityClass the entity class
+	 * @param rekeyService the rekey service
+	 * @param progressTracker the progress tracker
+	 * @param rekeyCryptoShield the rekey shield
+	 * @param recordsSupplier the records supplier
+	 * @return true if there were no records to process, false otherwise
 	 */
 	private boolean rekeyBatch(Class<?> entityClass, RekeyService<?> rekeyService, ProgressTracker progressTracker,
 							   RekeyCryptoShield rekeyCryptoShield, Function<RekeyService<?>, List<?>> recordsSupplier) {
@@ -490,6 +590,13 @@ public class RekeyScheduler {
 		return false;
 	}
 
+	/**
+	 * Rekeys a single entity instance.
+	 *
+	 * @param entity the entity to rekey
+	 * @param progressTracker the progress tracker
+	 * @param rekeyCryptoShield the rekey shield
+	 */
 	private void rekeyEntity(Object entity, ProgressTracker progressTracker, RekeyCryptoShield rekeyCryptoShield) {
 		progressTracker.incrementRecordsProcessed();
 		try {
@@ -516,6 +623,11 @@ public class RekeyScheduler {
 		}
 	}
 
+	/**
+	 * Removes a deprecated crypto key using the manager.
+	 *
+	 * @param tenantsDeprecatedCryptoKey the deprecated key
+	 */
 	private void removeKey(CryptoKey tenantsDeprecatedCryptoKey) {
 		try {
 			rekeyCryptoKeyManager.deleteKey(tenantsDeprecatedCryptoKey);
@@ -524,6 +636,12 @@ public class RekeyScheduler {
 		}
 	}
 
+	/**
+	 * Converts an integer to its ordinal string.
+	 *
+	 * @param i the integer value
+	 * @return the ordinal string
+	 */
 	private static String convertToOrdinal(int i) {
 		return switch (i % 100) {
 			case 11, 12, 13 -> i + "th";
@@ -531,10 +649,18 @@ public class RekeyScheduler {
 		};
 	}
 
+	/**
+	 * Returns the current instant from the configured clock.
+	 *
+	 * @return the current instant
+	 */
 	private Instant now() {
 		return clock.instant();
 	}
 
+	/**
+	 * Validates scheduler settings before start.
+	 */
 	private void validateSettings() {
 		boolean isValid = areRekeyServicesValid()
 			&& isObjectMapperValid()
@@ -550,6 +676,11 @@ public class RekeyScheduler {
 		}
 	}
 
+	/**
+	 * Validates the batch interval configuration.
+	 *
+	 * @return true when valid
+	 */
 	private boolean isBatchIntervalValid() {
 		boolean isValid = true;
 		if (batchInterval == null) {
@@ -560,6 +691,11 @@ public class RekeyScheduler {
 		return isValid;
 	}
 
+	/**
+	 * Validates the time unit configuration.
+	 *
+	 * @return true when valid
+	 */
 	private boolean areRekeyTimeUnitsValid() {
 		boolean isValid = true;
 		if (rekeyTimeUnits == null) {
@@ -570,6 +706,11 @@ public class RekeyScheduler {
 		return isValid;
 	}
 
+	/**
+	 * Validates the rekey check interval configuration.
+	 *
+	 * @return true when valid
+	 */
 	private boolean isRekeyCheckIntervalValid() {
 		boolean isValid = true;
 		if (rekeyCheckInterval == 0) {
@@ -580,6 +721,11 @@ public class RekeyScheduler {
 		return isValid;
 	}
 
+	/**
+	 * Validates the crypto key manager configuration.
+	 *
+	 * @return true when valid
+	 */
 	private boolean isRekeyCryptoManagerValid() {
 		boolean isValid = true;
 		if (rekeyCryptoKeyManager == null) {
@@ -590,6 +736,11 @@ public class RekeyScheduler {
 		return isValid;
 	}
 
+	/**
+	 * Validates the crypto key cache duration configuration.
+	 *
+	 * @return true when valid
+	 */
 	private boolean isCryptoKeyCacheDurationValid() {
 		boolean isValid = true;
 		if (cryptoKeyCacheDuration == null) {
@@ -600,6 +751,11 @@ public class RekeyScheduler {
 		return isValid;
 	}
 
+	/**
+	 * Validates the clock configuration.
+	 *
+	 * @return true when valid
+	 */
 	private boolean isClockValid() {
 		boolean isValid = true;
 		if (clock == null) {
@@ -610,6 +766,11 @@ public class RekeyScheduler {
 		return isValid;
 	}
 
+	/**
+	 * Validates the object mapper configuration.
+	 *
+	 * @return true when valid
+	 */
 	private boolean isObjectMapperValid() {
 		boolean isValid = true;
 		if (objectMapper == null) {
@@ -620,6 +781,11 @@ public class RekeyScheduler {
 		return isValid;
 	}
 
+	/**
+	 * Validates the rekey services configuration.
+	 *
+	 * @return true when valid
+	 */
 	private boolean areRekeyServicesValid() {
 		boolean isValid = true;
 		if (rekeyServices == null || rekeyServices.isEmpty()) {

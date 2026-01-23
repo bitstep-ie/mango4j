@@ -64,14 +64,35 @@ public final class CryptoShieldHmacHolder {
 	 */
 	private final String tokenizedRepresentation;
 
+	/**
+	 * Creates a holder with a key ID and value.
+	 *
+	 * @param cryptoKeyId the crypto key ID
+	 * @param valueToHmac the value to HMAC
+	 */
 	public CryptoShieldHmacHolder(String cryptoKeyId, String valueToHmac) {
 		this(cryptoKeyId, valueToHmac, null);
 	}
 
+	/**
+	 * Creates a holder with key ID, value, and alias.
+	 *
+	 * @param cryptoKeyId the crypto key ID
+	 * @param valueToHmac the value to HMAC
+	 * @param hmacAlias the HMAC alias
+	 */
 	public CryptoShieldHmacHolder(String cryptoKeyId, String valueToHmac, String hmacAlias) {
 		this(cryptoKeyId, valueToHmac, hmacAlias, null);
 	}
 
+	/**
+	 * Creates a holder with key ID, value, alias, and representation.
+	 *
+	 * @param cryptoKeyId the crypto key ID
+	 * @param valueToHmac the value to HMAC
+	 * @param hmacAlias the HMAC alias
+	 * @param tokenizedRepresentation the tokenized representation label
+	 */
 	public CryptoShieldHmacHolder(String cryptoKeyId, String valueToHmac, String hmacAlias, String tokenizedRepresentation) {
 		this.cryptoKeyId = cryptoKeyId;
 		this.value = valueToHmac;
@@ -79,30 +100,66 @@ public final class CryptoShieldHmacHolder {
 		this.tokenizedRepresentation = tokenizedRepresentation;
 	}
 
+	/**
+	 * Returns the crypto key ID.
+	 *
+	 * @return the key ID
+	 */
 	public String getCryptoKeyId() {
 		return cryptoKeyId;
 	}
 
+	/**
+	 * Sets the crypto key ID.
+	 *
+	 * @param cryptoKeyId the key ID
+	 */
 	public void setCryptoKeyId(String cryptoKeyId) {
 		this.cryptoKeyId = cryptoKeyId;
 	}
 
+	/**
+	 * Returns the value or computed HMAC.
+	 *
+	 * @return the value
+	 */
 	public String getValue() {
 		return value;
 	}
 
+	/**
+	 * Sets the value or computed HMAC.
+	 *
+	 * @param value the value
+	 */
 	public void setValue(String value) {
 		this.value = value;
 	}
 
+	/**
+	 * Returns the HMAC alias.
+	 *
+	 * @return the alias
+	 */
 	public String getHmacAlias() {
 		return hmacAlias;
 	}
 
+	/**
+	 * Returns the tokenized representation label.
+	 *
+	 * @return the representation label
+	 */
 	public String getTokenizedRepresentation() {
 		return tokenizedRepresentation;
 	}
 
+	/**
+	 * Compares holders by key ID, value, alias, and representation.
+	 *
+	 * @param o the other object
+	 * @return true when equal
+	 */
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
@@ -111,6 +168,11 @@ public final class CryptoShieldHmacHolder {
 		return Objects.equals(cryptoKeyId, that.cryptoKeyId) && Objects.equals(value, that.value) && Objects.equals(hmacAlias, that.hmacAlias) && Objects.equals(tokenizedRepresentation, that.tokenizedRepresentation);
 	}
 
+	/**
+	 * Returns the hash code for this holder.
+	 *
+	 * @return the hash code
+	 */
 	@Override
 	public int hashCode() {
 		return Objects.hash(cryptoKeyId, value, hmacAlias, tokenizedRepresentation);

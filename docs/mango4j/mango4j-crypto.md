@@ -1,25 +1,27 @@
 # mango4j-crypto
 
 ## Overview
+Annotation-driven encryption and HMAC for Java entities.
 
-Mango4j crypto
+## Architecture
+- `CryptoShield` orchestrates encrypt/decrypt for annotated entities.
+- `AnnotatedEntityManager` registers fields and strategy metadata.
+- HMAC strategies determine how HMACs are stored and rotated.
 
-## How to use?
-
-### Add the dependency
-
-To make use of the library, import the dependency into your project:
-
-```text language=text;title=Gradle Dependency;collapse=false;linenumbers=true;firstline=1
-implementation("ie.bitstep.mango:mango4j-cryto:1.8.0")
+## How to use
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-crypto:VERSION")
 ```
 
-```xml language=xml;title=Maven Dependency;collapse=false;linenumbers=true;firstline=1
+### Maven
+```xml
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
-    <artifactId>mango4j-cryto</artifactId>
-    <version>1.8.0</version>
+    <artifactId>mango4j-crypto</artifactId>
+    <version>VERSION</version>
 </dependency>
 ```
 
-Happy coding!
+## More
+- [Base documentation](mango4j-crypto/basic.md)

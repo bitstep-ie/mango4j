@@ -64,6 +64,12 @@ public class MapFormat {
 		this(pattern, Locale.getDefault(), TimeZone.getDefault());
 	}
 
+	/**
+	 * Constructs a MapFormat for the specified locale and default timezone.
+	 *
+	 * @param pattern the pattern for this message format
+	 * @param locale  the locale for this message format
+	 */
 	public MapFormat(String pattern, Locale locale) {
 		this(pattern, locale, TimeZone.getDefault());
 	}
@@ -97,14 +103,29 @@ public class MapFormat {
 		this.locale = locale;
 	}
 
+	/**
+	 * Returns the current locale.
+	 *
+	 * @return the locale
+	 */
 	public Locale getLocale() {
 		return locale;
 	}
 
+	/**
+	 * Sets the timezone used for formatting dates.
+	 *
+	 * @param tz the timezone to use
+	 */
 	public final void setTimeZone(TimeZone tz) {
 		timeZone = tz;
 	}
 
+	/**
+	 * Returns the current timezone used for formatting.
+	 *
+	 * @return the timezone
+	 */
 	public TimeZone getTimeZone() {
 		return timeZone;
 	}
@@ -167,12 +188,28 @@ public class MapFormat {
 		baseTemplate = segments[0];
 	}
 
+	/**
+	 * Handles an opening brace within a format segment.
+	 *
+	 * @param braceStack current brace depth
+	 * @param ch the character processed
+	 * @param segments the current segment builder
+	 * @return the updated brace depth
+	 */
 	private static int handleOpenBrace(int braceStack, char ch, StringBuilder segments) {
 		++braceStack;
 		segments.append(ch);
 		return braceStack;
 	}
 
+	/**
+	 * Handles a comma separator within a format segment.
+	 *
+	 * @param part the current part index
+	 * @param segments the segment builders
+	 * @param ch the character processed
+	 * @return the updated part index
+	 */
 	private static int handleComma(int part, StringBuilder[] segments, char ch) {
 		if (part < 3) {
 			part += 1;
@@ -182,6 +219,14 @@ public class MapFormat {
 		return part;
 	}
 
+	/**
+	 * Handles the first part of a format segment.
+	 *
+	 * @param ch the character processed
+	 * @param part the current part index
+	 * @param segments the segment builders
+	 * @return the updated part index
+	 */
 	private static int firstPart(char ch, int part, StringBuilder[] segments) {
 		if (ch == '{') {
 			part = 1;
@@ -192,6 +237,12 @@ public class MapFormat {
 	}
 
 
+	/**
+	 * Formats a string using a map of named arguments.
+	 *
+	 * @param map the values map
+	 * @return the formatted string
+	 */
 	public String format(Map<String, Object> map) {
 		CharSequence result = subformat(map);
 		return result.toString();
@@ -264,10 +315,25 @@ public class MapFormat {
 		return result;
 	}
 
+	/**
+	 * Resolves a nested value by dotted argument name.
+	 *
+	 * @param values the values map
+	 * @param argumentName the argument name
+	 * @return the resolved value
+	 */
 	private Object getValue(Map<String, Object> values, String argumentName) {
 		return getValue(values, 0, argumentName.split("\\."));
 	}
 
+	/**
+	 * Resolves a nested value by walking a path.
+	 *
+	 * @param values the values map
+	 * @param offset current path offset
+	 * @param argumentName the argument path segments
+	 * @return the resolved value
+	 */
 	private Object getValue(Map<String, Object> values, int offset, String[] argumentName) {
 		Object value = values.get(argumentName[offset]);
 
@@ -278,6 +344,13 @@ public class MapFormat {
 		return value;
 	}
 
+	/**
+	 * Checks whether a nested value exists for the argument name.
+	 *
+	 * @param values the values map
+	 * @param argumentName the argument name
+	 * @return true when present
+	 */
 	private boolean findValue(Map<String, Object> values, String argumentName) {
 		if (values == null) {
 			return false;
@@ -286,6 +359,14 @@ public class MapFormat {
 		return findValue(values, 0, argumentName.split("\\."));
 	}
 
+	/**
+	 * Checks whether a nested value exists for a path.
+	 *
+	 * @param values the values map
+	 * @param offset current path offset
+	 * @param argumentName the argument path segments
+	 * @return true when present
+	 */
 	private boolean findValue(Map<String, Object> values, int offset, String[] argumentName) {
 		if (!values.containsKey(argumentName[offset])) {
 			return false;
@@ -300,6 +381,11 @@ public class MapFormat {
 		return true;
 	}
 
+	/**
+	 * Builds a format descriptor from parsed segments.
+	 *
+	 * @param segments the parsed segments
+	 */
 	@SuppressWarnings({"squid:S1871"})
 	private void makeFormat(StringBuilder[] segments) {
 		// get the argument name
@@ -386,6 +472,13 @@ public class MapFormat {
 		segments[1].setLength(0);   // throw away other segments
 	}
 
+	/**
+	 * Finds a keyword index in a list of supported tokens.
+	 *
+	 * @param aString the input string
+	 * @param list the supported keyword list
+	 * @return the index or -1 when not found
+	 */
 	private static int findKeyword(String aString, String[] list) {
 		String s = aString.trim().toLowerCase();
 		for (int i = 0; i < list.length; i++) {

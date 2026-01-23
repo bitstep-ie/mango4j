@@ -18,9 +18,24 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Documented
 @Constraint(validatedBy = KebabCaseValidator.class)
 public @interface IsValidKebabCase {
+	/**
+	 * Defines the default validation message.
+	 *
+	 * @return the message template
+	 */
 	String message() default "Value doesn't conform to kebab-case naming style";
 
+	/**
+	 * Defines the validation groups.
+	 *
+	 * @return the groups
+	 */
 	Class<?>[] groups() default {};
 
+	/**
+	 * Defines the payload for clients of the Bean Validation API.
+	 *
+	 * @return the payload
+	 */
 	Class<? extends Payload>[] payload() default {};
 }

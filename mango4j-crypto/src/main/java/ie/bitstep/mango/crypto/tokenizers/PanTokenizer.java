@@ -51,6 +51,12 @@ public class PanTokenizer implements HmacTokenizer {
 		return tokenizedHmacHolders;
 	}
 
+	/**
+	 * Normalizes a PAN by removing spaces and dashes.
+	 *
+	 * @param value the input PAN
+	 * @return the normalized PAN
+	 */
 	private String normalise(String value) {
 		return value.replace(" ", "").replace("-", "");
 	}

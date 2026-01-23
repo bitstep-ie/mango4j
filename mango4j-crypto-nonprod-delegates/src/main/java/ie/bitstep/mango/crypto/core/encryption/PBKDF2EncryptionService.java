@@ -86,6 +86,13 @@ public class PBKDF2EncryptionService extends EncryptionServiceDelegate {
 			String cipherText) {
 	}
 
+	/**
+	 * Encrypts plaintext using PBKDF2-derived key material.
+	 *
+	 * @param cryptoKey the crypto key
+	 * @param payload the plaintext payload
+	 * @return the ciphertext container
+	 */
 	@Override
 	@SuppressWarnings("java:S3329")
 	public CiphertextContainer encrypt(final CryptoKey cryptoKey, final String payload) {
@@ -131,6 +138,12 @@ public class PBKDF2EncryptionService extends EncryptionServiceDelegate {
 		}
 	}
 
+	/**
+	 * Decrypts ciphertext using PBKDF2-derived key material.
+	 *
+	 * @param ciphertextContainer the ciphertext container
+	 * @return the decrypted plaintext
+	 */
 	@Override
 	public String decrypt(final CiphertextContainer ciphertextContainer) {
 		try {
@@ -165,6 +178,11 @@ public class PBKDF2EncryptionService extends EncryptionServiceDelegate {
 	}
 
 
+	/**
+	 * Calculates HMAC values for the supplied holders.
+	 *
+	 * @param list the HMAC holders
+	 */
 	@Override
 	public void hmac(final Collection<HmacHolder> list) {
 		list.forEach(holder -> {
@@ -185,6 +203,13 @@ public class PBKDF2EncryptionService extends EncryptionServiceDelegate {
 		});
 	}
 
+	/**
+	 * Computes an HMAC SHA-256 for the supplied payload.
+	 *
+	 * @param secretKey the secret key
+	 * @param payload the payload to sign
+	 * @return the Base64-encoded HMAC
+	 */
 	private static String computeHmacSha256(SecretKey secretKey, String payload) {
 		try {
 			Mac mac = Mac.getInstance("HmacSHA256");
@@ -196,11 +221,26 @@ public class PBKDF2EncryptionService extends EncryptionServiceDelegate {
 		}
 	}
 
+	/**
+	 * Returns the supported crypto key type.
+	 *
+	 * @return the key type name
+	 */
 	@Override
 	public String supportedCryptoKeyType() {
 		return NonProdCryptoKeyTypes.PBKDF2.getName();
 	}
 
+	/**
+	 * Creates a cipher instance from algorithm parameters.
+	 *
+	 * @param algorithm the algorithm
+	 * @param mode the mode
+	 * @param padding the padding
+	 * @return the cipher instance
+	 * @throws NoSuchPaddingException when padding is not available
+	 * @throws NoSuchAlgorithmException when algorithm is not available
+	 */
 	private Cipher getCipherInstance(Algorithm algorithm, Mode mode, Padding padding) throws NoSuchPaddingException, NoSuchAlgorithmException {
 		return Cipher.getInstance(
 				algorithm.getAlgorithm() + "/" +
@@ -208,6 +248,14 @@ public class PBKDF2EncryptionService extends EncryptionServiceDelegate {
 						padding.getPadding());
 	}
 
+	/**
+	 * Creates a cipher instance from ciphertext configuration.
+	 *
+	 * @param data the ciphertext config map
+	 * @return the cipher instance
+	 * @throws NoSuchPaddingException when padding is not available
+	 * @throws NoSuchAlgorithmException when algorithm is not available
+	 */
 	private Cipher getCipherInstance(Map<String, Object> data) throws NoSuchPaddingException, NoSuchAlgorithmException {
 		return getCipherInstance(
 				Algorithm.fromValue((String) data.get(CIPHER_ALG)),
@@ -215,6 +263,18 @@ public class PBKDF2EncryptionService extends EncryptionServiceDelegate {
 				Padding.fromValue((String) data.get(CIPHER_PADDING)));
 	}
 
+	/**
+	 * Generates a PBKDF2-derived secret key.
+	 *
+	 * @param keySize key size in bits
+	 * @param iterations PBKDF2 iterations
+	 * @param algorithm cipher algorithm name
+	 * @param config the crypto key configuration
+	 * @param salt the salt bytes
+	 * @return the derived secret key
+	 * @throws NoSuchAlgorithmException when the key factory is unavailable
+	 * @throws InvalidKeySpecException when the key spec is invalid
+	 */
 	static SecretKey generatePBKDF2Key(
 			final int keySize,
 			final int iterations,

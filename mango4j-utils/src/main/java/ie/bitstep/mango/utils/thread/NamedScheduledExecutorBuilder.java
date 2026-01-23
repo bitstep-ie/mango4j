@@ -26,13 +26,27 @@ public final class NamedScheduledExecutorBuilder {
 	private boolean allowCoreThreadTimeout = false;
 	private RejectedExecutionHandler rejectedExecutionHandler = null;
 
+	/**
+	 * Creates a builder with default settings.
+	 */
 	private NamedScheduledExecutorBuilder() {
 	}
 
+	/**
+	 * Creates a new builder instance.
+	 *
+	 * @return a new builder
+	 */
 	public static NamedScheduledExecutorBuilder builder() {
 		return new NamedScheduledExecutorBuilder();
 	}
 
+	/**
+	 * Sets the thread pool size.
+	 *
+	 * @param poolSize the pool size (must be > 0)
+	 * @return this builder
+	 */
 	public NamedScheduledExecutorBuilder poolSize(int poolSize) {
 		if (poolSize < 1) {
 			throw new IllegalArgumentException("poolSize must be > 0");
@@ -41,6 +55,12 @@ public final class NamedScheduledExecutorBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets the thread name prefix.
+	 *
+	 * @param prefix the thread name prefix
+	 * @return this builder
+	 */
 	public NamedScheduledExecutorBuilder threadNamePrefix(String prefix) {
 		if (prefix == null || prefix.isBlank()) {
 			throw new IllegalArgumentException("threadNamePrefix must be non-blank");
@@ -49,21 +69,45 @@ public final class NamedScheduledExecutorBuilder {
 		return this;
 	}
 
+	/**
+	 * Sets whether threads are daemon threads.
+	 *
+	 * @param daemon true to use daemon threads
+	 * @return this builder
+	 */
 	public NamedScheduledExecutorBuilder daemon(boolean daemon) {
 		this.daemon = daemon;
 		return this;
 	}
 
+	/**
+	 * Sets an uncaught exception handler for threads.
+	 *
+	 * @param handler the handler to use
+	 * @return this builder
+	 */
 	public NamedScheduledExecutorBuilder uncaughtExceptionHandler(Thread.UncaughtExceptionHandler handler) {
 		this.uncaughtExceptionHandler = handler;
 		return this;
 	}
 
+	/**
+	 * Sets whether cancelled tasks are removed from the queue.
+	 *
+	 * @param removeOnCancelPolicy true to remove cancelled tasks
+	 * @return this builder
+	 */
 	public NamedScheduledExecutorBuilder removeOnCancelPolicy(boolean removeOnCancelPolicy) {
 		this.removeOnCancelPolicy = removeOnCancelPolicy;
 		return this;
 	}
 
+	/**
+	 * Sets the keep-alive time for idle threads.
+	 *
+	 * @param seconds keep-alive time in seconds
+	 * @return this builder
+	 */
 	public NamedScheduledExecutorBuilder keepAliveTime(long seconds) {
 		if (seconds < 0) {
 			throw new IllegalArgumentException("keepAliveTime must be >= 0");
@@ -72,11 +116,23 @@ public final class NamedScheduledExecutorBuilder {
 		return this;
 	}
 
+	/**
+	 * Enables or disables core thread timeouts.
+	 *
+	 * @param allow true to allow core thread timeouts
+	 * @return this builder
+	 */
 	public NamedScheduledExecutorBuilder allowCoreThreadTimeout(boolean allow) {
 		this.allowCoreThreadTimeout = allow;
 		return this;
 	}
 
+	/**
+	 * Sets a rejected execution handler.
+	 *
+	 * @param handler the handler to use
+	 * @return this builder
+	 */
 	public NamedScheduledExecutorBuilder rejectedExecutionHandler(RejectedExecutionHandler handler) {
 		this.rejectedExecutionHandler = Objects.requireNonNull(handler, "handler");
 		return this;
@@ -109,13 +165,20 @@ public final class NamedScheduledExecutorBuilder {
 	/**
 	 * ThreadFactory that names threads with a prefix and index, optional daemon flag and handler.
 	 */
-	public static final class NamedThreadFactory implements ThreadFactory {
+		public static final class NamedThreadFactory implements ThreadFactory {
 		private final String namePrefix;
 		private final boolean daemon;
-		private final Thread.UncaughtExceptionHandler handler;
-		private final AtomicInteger counter = new AtomicInteger(1);
+			private final Thread.UncaughtExceptionHandler handler;
+			private final AtomicInteger counter = new AtomicInteger(1);
 
-		public NamedThreadFactory(String namePrefix, boolean daemon, Thread.UncaughtExceptionHandler handler) {
+			/**
+			 * Creates a thread factory with naming and handler configuration.
+			 *
+			 * @param namePrefix the thread name prefix
+			 * @param daemon true to create daemon threads
+			 * @param handler optional uncaught exception handler
+			 */
+			public NamedThreadFactory(String namePrefix, boolean daemon, Thread.UncaughtExceptionHandler handler) {
 			if (namePrefix == null || namePrefix.isBlank()) {
 				throw new IllegalArgumentException("namePrefix must be non-blank");
 			}
@@ -124,6 +187,12 @@ public final class NamedScheduledExecutorBuilder {
 			this.handler = handler;
 		}
 
+		/**
+		 * Creates a new thread with the configured name and handler.
+		 *
+		 * @param r the runnable to execute
+		 * @return the new thread
+		 */
 		@Override
 		public Thread newThread(Runnable r) {
 			Thread t = new Thread(r, namePrefix + counter.getAndIncrement());

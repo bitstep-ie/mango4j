@@ -14,6 +14,17 @@ import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryp
 import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryptionConstants.GCM_TAG_LENGTH;
 import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryptionConstants.IV;
 
+/**
+ * Configuration payload for wrapped ciphertext and metadata.
+ *
+ * @param dataEncryptionKey the wrapped data encryption key
+ * @param algorithm         the cipher algorithm
+ * @param mode              the cipher mode
+ * @param padding           the cipher padding
+ * @param gcmTagLength      the GCM tag length in bits
+ * @param iv                the initialization vector
+ * @param cipherText        the encrypted data payload
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record EncryptedDataConfig(
 	@JsonProperty(DATA_ENCRYPTION_KEY)

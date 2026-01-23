@@ -1,35 +1,31 @@
-## mango4j-hibernate-proxy-resolver
+# mango4j-hibernate-proxy-resolver
 
-> Bitstep's common utilities
+[Back to root README](../readme.md)
 
-### How to use?
+Hibernate proxy resolver for `mango4j-utils` mutators.
 
-When using the ObjectMutator in a project that has hibernate entities you need to depend on
-mango4j-hibernate-proxy-resolver and create the ObjectMutator like so
+## Architecture
+- `HibernateProxyResolver` implements `ProxyResolver` and unwraps `HibernateProxy` instances before mutation.
 
-~~~java
-ObjectMutator(new HibernateProxyResolver());
-~~~
+## Usage
+### Maven
+```xml
+<dependency>
+    <groupId>ie.bitstep.mango</groupId>
+    <artifactId>mango4j-hibernate-proxy-resolver</artifactId>
+    <version>VERSION</version>
+</dependency>
+```
 
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-hibernate-proxy-resolver:VERSION")
+```
 
-#### Maven
-It can
-be used
-by projects
-by adding
-the following
-dependency to
-the POM
-file
-~~~xml
-	<dependency>
-        <groupId>ie.bitstep.mango</groupId>
-        <artifactId>mango4j-hibernate-proxy-resolver</artifactId>
-        <version>${mango4j-utils.version}</version>
-    </dependency>
-~~~
+## Example
+```java
+ObjectMutator mutator = new ObjectMutator(new HibernateProxyResolver())
+    .on(Text.class, new HtmlEscapeMutator());
 
-#### Gradle
-
-TBU
-
+mutator.mutate(entity);
+```

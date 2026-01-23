@@ -38,8 +38,11 @@ import java.util.function.Function;
  */
 public final class CollectionReconciler {
 
+	/**
+	 * Prevents instantiation.
+	 */
 	private CollectionReconciler() {
-// utility class
+	// utility class
 	}
 
 	/**
@@ -156,28 +159,69 @@ public final class CollectionReconciler {
 		return Math.max(16, expectedDesiredSize * 2);
 	}
 
+	/**
+	 * Determines a starting size for desired collections.
+	 *
+	 * @param desired the desired iterable
+	 * @param <T> element type
+	 * @return the expected size or a default
+	 */
 	static <T> int calcInitialDesiredSize(Iterable<? extends T> desired) {
 		return (desired instanceof Collection<?> c) ? c.size() : 16;
 	}
 
+	/**
+	 * Adds a removed element to the report bucket if enabled.
+	 *
+	 * @param entry the removed entry
+	 * @param buckets result buckets
+	 * @param report whether reporting is enabled
+	 * @param <T> element type
+	 * @param <K> key type
+	 */
 	private static <T, K> void reportRemoved(Map.Entry<K, T> entry, Buckets<T> buckets, boolean report) {
 		if (report) {
 			buckets.removed.add(entry.getValue());
 		}
 	}
 
+	/**
+	 * Adds an added element to the report bucket if enabled.
+	 *
+	 * @param desiredElement the element added
+	 * @param buckets result buckets
+	 * @param report whether reporting is enabled
+	 * @param <T> element type
+	 */
 	private static <T> void reportAdded(T desiredElement, Buckets<T> buckets, boolean report) {
 		if (report) {
 			buckets.added.add(desiredElement);
 		}
 	}
 
+	/**
+	 * Adds a kept element to the report bucket if enabled.
+	 *
+	 * @param buckets result buckets
+	 * @param existing the kept element
+	 * @param report whether reporting is enabled
+	 * @param <T> element type
+	 */
 	private static <T> void reportKept(Buckets<T> buckets, T existing, boolean report) {
 		if (report) {
 			buckets.kept.add(existing);
 		}
 	}
 
+	/**
+	 * Builds a key-indexed map, validating for nulls and duplicates.
+	 *
+	 * @param elements the elements to index
+	 * @param keyExtractor the key extractor
+	 * @param <T> element type
+	 * @param <K> key type
+	 * @return a map of keys to elements
+	 */
 	private static <T, K> Map<K, T> buildUniqueKeyMap(
 			Collection<? extends T> elements,
 			Function<? super T, ? extends K> keyExtractor
@@ -196,6 +240,13 @@ public final class CollectionReconciler {
 		return map;
 	}
 
+	/**
+	 * Calculates an initial map capacity for the given collection.
+	 *
+	 * @param elements the elements to size for
+	 * @param <T> element type
+	 * @return the initial capacity
+	 */
 	static <T> int calcInitialSize(Collection<? extends T> elements) {
 // Simple sizing heuristic: keep capacity ≥ 16 and > size to reduce early rehashing.
 		return Math.max(16, elements.size() * 2);
@@ -211,24 +262,51 @@ public final class CollectionReconciler {
 		private final List<T> removed;
 		private final List<T> kept;
 
+		/**
+		 * Creates a result snapshot.
+		 *
+		 * @param added items added during reconciliation
+		 * @param removed items removed during reconciliation
+		 * @param kept items retained during reconciliation
+		 */
 		private Result(List<T> added, List<T> removed, List<T> kept) {
 			this.added = List.copyOf(added);
 			this.removed = List.copyOf(removed);
 			this.kept = List.copyOf(kept);
 		}
 
+		/**
+		 * Returns items added during reconciliation.
+		 *
+		 * @return added items
+		 */
 		public List<T> getAdded() {
 			return added;
 		}
 
+		/**
+		 * Returns items removed during reconciliation.
+		 *
+		 * @return removed items
+		 */
 		public List<T> getRemoved() {
 			return removed;
 		}
 
+		/**
+		 * Returns items kept during reconciliation.
+		 *
+		 * @return kept items
+		 */
 		public List<T> getKept() {
 			return kept;
 		}
 
+		/**
+		 * Returns a string representation of the reconciliation result.
+		 *
+		 * @return the result string
+		 */
 		@Override
 		public String toString() {
 			return "Result{" +
@@ -250,6 +328,12 @@ public final class CollectionReconciler {
 		final List<T> kept;
 		final boolean report;
 
+		/**
+		 * Creates bucket lists for reconciliation.
+		 *
+		 * @param report whether reporting is enabled
+		 * @param expectedDesiredSize expected desired collection size
+		 */
 		Buckets(boolean report, int expectedDesiredSize) {
 			this.report = report;
 // Pre-size merged to expected desired size to reduce reallocations.
@@ -265,12 +349,25 @@ public final class CollectionReconciler {
 			}
 		}
 
+		/**
+		 * Returns a {@link Result} if reporting is enabled.
+		 *
+		 * @return the result or null
+		 */
 		Result<T> toResultOrNull() {
 			if (!report) return null;
 			return new Result<>(added, removed, kept);
 		}
 	}
 
+	/**
+	 * Creates buckets sized for the desired collection.
+	 *
+	 * @param report whether reporting is enabled
+	 * @param expectedDesiredSize expected desired collection size
+	 * @param <T> element type
+	 * @return new buckets instance
+	 */
 	private static <T> Buckets<T> createBuckets(boolean report, int expectedDesiredSize) {
 		return new Buckets<>(report, expectedDesiredSize);
 	}

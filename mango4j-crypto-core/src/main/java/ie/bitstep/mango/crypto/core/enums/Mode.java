@@ -23,11 +23,22 @@ public enum Mode {
 		this.mode = mode;
 	}
 
+	/**
+	 * Returns the mode value.
+	 *
+	 * @return the mode value
+	 */
 	@JsonValue
 	public String getMode() {
 		return mode;
 	}
 
+	/**
+	 * Parses a mode from its string value.
+	 *
+	 * @param value the mode value
+	 * @return the matching enum
+	 */
 	@JsonCreator
 	public static Mode fromValue(String value) {
 		for (Mode v : values()) {
@@ -39,4 +50,3 @@ public enum Mode {
 		throw new IllegalArgumentException("No enum constant with value: " + value);
 	}
 }
-

@@ -28,16 +28,32 @@ public class IdentityEncryptionService extends EncryptionServiceDelegate {
 		return new CiphertextContainer(encryptionKey, Map.of(CIPHER_TEXT, data));
 	}
 
+	/**
+	 * Returns the original plaintext value.
+	 *
+	 * @param ciphertextContainer the ciphertext container
+	 * @return the original value
+	 */
 	@Override
 	public String decrypt(CiphertextContainer ciphertextContainer) {
 		return (String) ciphertextContainer.getData().get(CIPHER_TEXT);
 	}
 
+	/**
+	 * No-op HMAC implementation.
+	 *
+	 * @param hmacHolders the HMAC holders
+	 */
 	@Override
 	public void hmac(Collection<HmacHolder> hmacHolders) {
 		// do nothing
 	}
 
+	/**
+	 * Returns the supported crypto key type.
+	 *
+	 * @return the key type name
+	 */
 	@Override
 	public String supportedCryptoKeyType() {
 		return NonProdCryptoKeyTypes.IDENTITY.getName();

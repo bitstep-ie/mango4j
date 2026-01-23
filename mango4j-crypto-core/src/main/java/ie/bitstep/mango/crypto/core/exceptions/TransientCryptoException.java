@@ -9,6 +9,12 @@ import ie.bitstep.mango.crypto.core.encryption.EncryptionServiceDelegate;
  */
 public class TransientCryptoException extends RuntimeException {
 
+	/**
+	 * Creates an exception with a message and cause.
+	 *
+	 * @param message the error message
+	 * @param cause the underlying cause
+	 */
 	public TransientCryptoException(String message, Throwable cause) {
 		super(message, cause);
 	}

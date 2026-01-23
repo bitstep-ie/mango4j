@@ -37,6 +37,9 @@ enum InMemoryKeyVault {
 	private final KeyGenerator keyGenerator;
 	private final SecureRandom random = new SecureRandom();
 
+	/**
+	 * Creates the vault and initializes the key generator.
+	 */
 	InMemoryKeyVault() {
 		try {
 			this.keyGenerator = KeyGenerator.getInstance(ENCRYPTION_ALGORITHM);
@@ -86,6 +89,11 @@ enum InMemoryKeyVault {
 		}
 	}
 
+	/**
+	 * Removes a stored key and destroys its contents.
+	 *
+	 * @param id the key ID
+	 */
 	void remove(UUID id) {
 		VaultEntry vaultEntry = store.remove(id);
 		if (vaultEntry == null) {
@@ -101,6 +109,11 @@ enum InMemoryKeyVault {
 		}
 	}
 
+	/**
+	 * Returns the number of entries in the vault.
+	 *
+	 * @return the entry count
+	 */
 	int size() {
 		return store.size();
 	}
@@ -110,6 +123,13 @@ enum InMemoryKeyVault {
 		final byte[] iv;
 		final byte[] ciphertext;
 
+		/**
+		 * Creates a vault entry.
+		 *
+		 * @param vaultKey the vault key
+		 * @param iv the initialization vector
+		 * @param ciphertext the encrypted key material
+		 */
 		VaultEntry(SecretKey vaultKey, byte[] iv, byte[] ciphertext) {
 			this.vaultKey = vaultKey;
 			this.iv = iv;

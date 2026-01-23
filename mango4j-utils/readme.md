@@ -1,136 +1,105 @@
-## mango4j-utils
-> Bitstep's common utilities
+# mango4j-utils
 
-Generally useful classes for Java applications.
+[Back to root README](../readme.md)
 
-### How to use?
-#### Maven
-It can be used by projects by adding the following dependency to the POM file
-~~~xml
-    <dependency>
-        <groupId>ie.bitstep.mango</groupId>
-        <artifactId>mango4j-utils</artifactId>
-        <version>${mango4j-utils.version}</version>
-    </dependency>
-~~~
-#### Gradle
-TBU
+Bitstep general-purpose utilities used across mango4j modules.
 
-### Functionality
-#### Dates
+## Architecture
+- Conformance and mutation: `ObjectMutator`, `Conformer`, and annotations (`@Reduce`, `@Tolerate`, `@Text`) enforce field-level rules and transformations.
+- Masking: `Masker` hierarchy (`PanMasker`, `IdMasker`, `AccountIdMasker`, list maskers) plus `MaskerFactory` and `MaskingUtils`.
+- Date/time: `DateUtils`, `CalendarUtils`, `Proximity`, `MovingClock`.
+- Mapping and conversion: `MappingUtils`, `Converter`/`ConverterFactory`, and `CollectionToSize`.
+- URL and strings: `URLGenerator`, `QueryParam`, and `MapFormat` for templated formatting.
+- Threading and entities: `NamedScheduledExecutorBuilder`, `EntityToStringBuilder`.
+- Proxy resolution: `ProxyResolver` and `IdentityProxyResolver` for mutator integration.
 
-#### Masking
+## Functionality
+- Enforce field-length and tolerance rules on objects via annotations.
+- Mutate annotated fields (escape/unescape, custom mutators) with deep or shallow traversal.
+- Mask sensitive values consistently, including PANs and IDs.
+- Generate stable URLs with normalized paths and query parameters.
+- Convert objects to maps/JSON via Jackson.
+- Create time-ordered UUIDv7 values.
+- Build named, configured `ScheduledExecutorService` instances.
 
-    ~~~java
-        new IdMasker("Y").mask("01234567890ABCDEF")).isEqualTo("01234YYYYYYYYYYYY")
-    ~~~
+## Usage
+### Maven
+```xml
+<dependency>
+    <groupId>ie.bitstep.mango</groupId>
+    <artifactId>mango4j-utils</artifactId>
+    <version>VERSION</version>
+</dependency>
+```
 
-#### Object conformance
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-utils:VERSION")
+```
 
-* Conformer
+## Examples
+### Conformance with @Tolerate and @Reduce
+```java
+class Category {
+    @Tolerate(min = 3, max = 3)
+    private String code;
 
-  The conformer classes goal is to make an object conform to requirements.
-  To make an object conformant you call one of the Conformer classes conform() methods on a suitably annotated class.
-  eg:
-    ~~~java
-      Conformer.conform(object);
-      // or
-      Conformer.deepConform(object);
-    ~~~
-  conformer() will only make direct members compliant of the object, whereas deepConformer() will recurse into sub-objects and make them compliant also.
+    @Reduce(max = 5)
+    private String label;
+}
 
-* Annotations
-    * @Reduce(max, ellipsis = true)
+Category category = new Category();
+category.setCode("SQL Database");
+category.setLabel("Payments Platform");
 
-      Reduce a string to the maximum length, adding ellipsis if requested (defaults to true)
+Conformer.conform(category);
+// code becomes "SQL", label becomes "Payme" (with ellipsis if configured).
+```
 
-    * @Tolerate(min, max)
+### ObjectMutator with HTML escaping
+```java
+class Message {
+    @Text
+    private String body;
+}
 
-      Make an object conform to the tolerance values.
+ObjectMutator mutator = new ObjectMutator()
+    .on(Text.class, new HtmlEscapeMutator());
 
-      Applies to String and numeric types only. For Strings min & max are lengths.
+mutator.mutate(message);
+```
 
-* Examples
+### Masking utilities
+```java
+String maskedPan = MaskerFactory.getMasker(PanMasker.class).mask("5105105105105100");
+String maskedId = new IdMasker("Y").mask("01234567890ABCDEF");
+```
 
-  Annotated class
-    ~~~java
-        package ie.bitstep.mango.utils.conformance;
+### URLGenerator
+```java
+String url = URLGenerator.ofURL("http://api.stage.bitstep.ie//mdes/")
+    .path("consumer")
+    .path("allocate")
+    .param("limit", "100")
+    .toString();
+```
 
-        class Category {
-            // Tolerate a value between 3 and 3 characters
-            @Tolerate(min = 3, max = 3)
-            private String category;
+### MappingUtils
+```java
+Map<String, Object> payload = MappingUtils.fromObjectToMap(somePojo);
+String json = MappingUtils.fromObjectToJson(somePojo);
+```
 
-            public Category(
-                String category) {
-                this.category = category;
-            }
+### UUIDv7
+```java
+UUID id = new UUIDv7().generate();
+```
 
-            public Category(Category t) {
-                this.category = t.category;
-            }
-
-            public String getCategory() {
-                return category;
-            }
-        }
-    ~~~
-
-  Application class
-    ~~~java
-        package ie.bitstep.application;
-
-        import ie.bitstep.mango.utils.conformance.Conformer;
-
-        class Application {
-              Category ct = new Category("SQL Database");
-              Conformer.conform(ct);
-              assertThat(ct.getCategory()).isEqualTo("SQL");
-        }
-    ~~~
-
-#### ObjectMutator
-
-~~~java
-ObjectMutator objectMutator = new ObjectMutator()
-        .on(Text.class, new HtmlUnescapeMutator())
-        .on(Text.class, new HtmlEscapeMutator());
-
-    objectMutator.mutate(this);
-~~~
-
-~~~java
-// if using mutator on hibernate entities
-ObjectMutator objectMutator = new ObjectMutator(new HibernateProxyResolver())
-        .on(Text.class, new HtmlUnescapeMutator())
-        .on(Text.class, new HtmlEscapeMutator());
-
-    objectMutator.mutate(this);
-~~~
-
-#### URLs
-* URLGenerator
-
-  The URLGenerator class can be used to manage the url paths and help to
-  ensure that there are no inconsistencies such as
-  accidental duplicate slashes etc.
-
-    ~~~java
-    package ie.bitstep.mango.url.examples;
-
-    import ie.bitstep.mango.utils.url.URLGenerator;
-
-    public class Test {
-        public String getAllocateURL() {
-            URLGenerator urlGenerator = URLGenerator.ofURL("http://api.stage.bitstep.com//mdes/consumer//");
-            urlGenerator.path("//allocate//");
-            urlGenerator.param("validFrom", "11/22");
-            urlGenerator.param("validTo", "02/23");
-            urlGenerator.param("singleUse", "true");
-            urlGenerator.param("merchantLocked", "true");
-            urlGenerator.param("limit", "100");
-
-            return urlGenerator.toString();
-        }
-    }
-    ~~~
+### NamedScheduledExecutorBuilder
+```java
+ScheduledExecutorService executor = NamedScheduledExecutorBuilder.builder()
+    .poolSize(4)
+    .threadNamePrefix("crypto-retry")
+    .daemon(true)
+    .build();
+```

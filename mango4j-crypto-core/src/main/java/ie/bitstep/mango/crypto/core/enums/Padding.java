@@ -27,11 +27,22 @@ public enum Padding {
 		this.padding = padding;
 	}
 
+	/**
+	 * Returns the padding value.
+	 *
+	 * @return the padding value
+	 */
 	@JsonValue
 	public String getPadding() {
 		return padding;
 	}
 
+	/**
+	 * Parses padding from its string value.
+	 *
+	 * @param value the padding value
+	 * @return the matching enum
+	 */
 	@JsonCreator
 	public static Padding fromValue(String value) {
 		for (Padding v : values()) {
@@ -43,4 +54,3 @@ public enum Padding {
 		throw new IllegalArgumentException("No enum constant with value: " + value);
 	}
 }
-

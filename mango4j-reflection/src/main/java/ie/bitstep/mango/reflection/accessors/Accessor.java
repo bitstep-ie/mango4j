@@ -8,8 +8,17 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
 public @interface Accessor {
+	/**
+	 * Specifies the getter method name to use.
+	 *
+	 * @return the getter method name
+	 */
 	String getter() default "";
 
+	/**
+	 * Specifies the setter method name to use.
+	 *
+	 * @return the setter method name
+	 */
 	String setter() default "";
 }
-

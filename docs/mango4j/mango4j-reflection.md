@@ -1,25 +1,27 @@
 # mango4j-reflection
 
 ## Overview
+Reflection helpers with cached metadata and property accessors.
 
-Mango4j reflection
+## Architecture
+- `ClassInfo` caches fields and methods for faster reflection.
+- `PropertyAccessor` resolves getters/setters via conventions or annotations.
+- `ReflectionUtils` offers convenient get/set operations and method lookups.
 
-## How to use?
-
-### Add the dependency
-
-To make use of the library, import the dependency into your project.:
-
-```text language=text;title=Gradle Dependency;collapse=false;linenumbers=true;firstline=1
-implementation("ie.bitstep.mango:mango4j-reflection:1.8.0")
+## How to use
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-reflection:VERSION")
 ```
 
-```xml language=xml;title=Maven Dependency;collapse=false;linenumbers=true;firstline=1
+### Maven
+```xml
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j-reflection</artifactId>
-    <version>1.8.0</version>
+    <version>VERSION</version>
 </dependency>
 ```
 
-Happy coding!
+## More
+- [Examples](mango4j-reflection/examples.md)

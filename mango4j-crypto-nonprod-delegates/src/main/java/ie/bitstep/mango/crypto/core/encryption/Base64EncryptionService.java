@@ -30,21 +30,43 @@ public class Base64EncryptionService extends EncryptionServiceDelegate {
 		return new CiphertextContainer(encryptionKey, Map.of(CIPHER_TEXT, base64Encode(data)));
 	}
 
+	/**
+	 * Encodes the supplied value with Base64.
+	 *
+	 * @param data the input data
+	 * @return the base64-encoded string
+	 */
 	private String base64Encode(String data) {
 		return new String(ENCODER.encode(data.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
 	}
 
+	/**
+	 * Decodes a Base64-encoded value.
+	 *
+	 * @param ciphertextContainer the ciphertext container
+	 * @return the decoded plaintext
+	 */
 	@Override
 	public String decrypt(CiphertextContainer ciphertextContainer) {
 		return new String(DECODER.decode(((String) ciphertextContainer.getData().get(CIPHER_TEXT)).getBytes(StandardCharsets.UTF_8)),
 			StandardCharsets.UTF_8);
 	}
 
+	/**
+	 * Computes Base64 HMAC placeholders for the supplied holders.
+	 *
+	 * @param hmacHolders the holders to update
+	 */
 	@Override
 	public void hmac(Collection<HmacHolder> hmacHolders) {
 		hmacHolders.forEach(hmacHolder -> hmacHolder.setValue(base64Encode(hmacHolder.getCryptoKey().getId() + ":" + hmacHolder.getValue())));
 	}
 
+	/**
+	 * Returns the supported crypto key type.
+	 *
+	 * @return the key type name
+	 */
 	@Override
 	public String supportedCryptoKeyType() {
 		return NonProdCryptoKeyTypes.BASE_64.getName();
