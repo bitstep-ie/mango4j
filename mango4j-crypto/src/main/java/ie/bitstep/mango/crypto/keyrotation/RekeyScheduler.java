@@ -35,7 +35,6 @@ import static java.lang.System.Logger.Level.ERROR;
 import static java.lang.System.Logger.Level.INFO;
 import static java.lang.System.Logger.Level.TRACE;
 import static java.lang.System.Logger.Level.WARNING;
-import static java.util.Collections.emptyList;
 
 /**
  * <b>Warning!!!</b> This class is currently experimental and is expected to go through several more iterations of both redesign
@@ -175,7 +174,7 @@ public class RekeyScheduler {
 	 * @param initialDelay       The time after the {@link RekeyScheduler#start()} method is called which you want to wait before the first rekey job begins.
 	 * @param rekeyCheckInterval The period of time between subsequent rekey jobs. Since rekey operations are usually
 	 *                           quite rare setting this to once a day is probably adequate. This scheduler will wake up and check for any pending
-	 *                           KEY_ON/KEY_OFF jobs (as signalled by the {@link CryptoKey#rekeyMode}) field.
+	 *                           KEY_ON/KEY_OFF jobs (as signaled by the {@link CryptoKey#rekeyMode}) field.
 	 * @param rekeyTimeUnits     The time units that initialDelay and rekeyCheckInterval parameters are specified in.
 	 * @return this
 	 */
@@ -362,7 +361,7 @@ public class RekeyScheduler {
 			logger.log(TRACE, "RekeyMode is set to {0} on the latest encryption key{1}", KEY_ON, tenantLogString(tenantId));
 			if (doAnyEncryptedRecordsNeedRekeying(keyOnRecordSupplier(tenantLatestEncryptionKey))) {
 				logger.log(TRACE, "Some records need re-encrypted{0}", tenantLogString(tenantId));
-				RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(cryptoShield, tenantLatestEncryptionKey,null);
+				RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(cryptoShield, tenantLatestEncryptionKey, null);
 				long totalEncryptedRecordsRekeyedForTenant = rekey(tenantLatestEncryptionKey, rekeyCryptoShield, keyOnRecordSupplier(tenantLatestEncryptionKey));
 				logger.log(INFO, "Full re-key of all records has been completed{0}. Total of {1} records rekeyed to {2} by this job", tenantLogString(tenantId), totalEncryptedRecordsRekeyedForTenant, tenantLatestEncryptionKey);
 			} else {
@@ -422,7 +421,7 @@ public class RekeyScheduler {
 
 	private void reHmac(String tenantId, List<CryptoKey> tenantAllCryptoKeysSortedByDateDescending) {
 		Optional<CryptoKey> hmacKeyToRekeyTo = getHmacKeyToRekeyTo(tenantAllCryptoKeysSortedByDateDescending);
-		if(hmacKeyToRekeyTo.isEmpty()) {
+		if (hmacKeyToRekeyTo.isEmpty()) {
 			logger.log(ERROR, "No valid HMAC key found to rekey to{0}.....skipping HMAC rekey for this tenant", tenantLogString(tenantId));
 			return;
 		} else if (hmacKeyToRekeyTo.get().getCreatedDate().plus(cryptoKeyCacheDuration).isAfter(now())) {
