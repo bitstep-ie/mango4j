@@ -1,20 +1,46 @@
-# mango4j-crypto-core - Base Documentation
+# Table of Contents
 
-If you have any questions/feedback or would like a consultation/discussion regarding the following subject matter, please reach out
-to [Ashley Waldron](mailto:ashley.waldron@gmail.com) and [John Allen.](mailto:john.allen@gmail.com)
+1. [Introduction](#introduction)
+2. [Mango Crypto-Key-Reference Driven Design](#2-mango-crypto-key-driven-design)
+   3. [Key Objects](#key-objects)
+   2. [Encryption Service Delegates](encryption-service-delegates)
+3. [Ciphertext Representation](#ciphertext-representation)
+4. [Key Rotation (Changing the key)]()
+      1. [Encryption Key Rotation]()
+      6. [HMAC Key Rotation]()
+         7. [HMAC Key Rotation Challenges]()
+            1. [Searching operations during the rotation of a HMAC key](#searching-operations-during-the-rotation-of-a-HMAC-key)
+            2. [Unique constraint enforcement](#unique-constraint-enforcement)
+5. [Rekeying (re-encrypting records)]()
+5. [HMAC Strategies]()
+   1. [List HMAC Strategy](#list-hmac-strategy)
+      1. [Process for re-keying data with the List HMAC Strategy](#process-for-re-keying-data-with-the-list-hmac-strategy)
+   2. [Double HMAC Strategy](#double-hmac-strategy)
+      1. [Process for re-keying data with the Double HMAC Strategy](#process-for-re-keying-data-with-the-double-hmac-strategy)
+6. [FAQ]()
+   1. [Why do I need to HMAC data in order to make it searchable?](#Why-do-I-need-to-HMAC-data-in-order-to-make-it-searchable?)
+   2. [What is a hash?](#What's-a-hash?)
+   3. [What's a HMAC?](#What'-s-a-HMAC?)
+   4. [What's an IV?](#What's-an-IV?)
+   5. [What is a tenant?](#What-is-a-tenant?)
+   6. [What is a key rotation?](#What-is-a-key-rotation?)
+   7. [What is HMAC tokenization?](#What-is-HMAC-tokenization?)
 
-## Background
 
-This documentation is aimed at providing a general overview of implementing application level encryption (ALE) in your code. Most of the discussion here will focus on general
-challenges and only a small portion will talk about the actual library itself since the main library that is intended to be used by application developers is
-the [mango4j-crypto](/mango4j-crypto/basic.md) library (which is built on top of this). The contents in this document can be
-used as a reference for developers who need to implement ALE regardless of whether they use this library (or the main mango4j-crypto library) or not. Developers should consider the
-guidelines documented in each section when building their own solutions.
+
+<a name="introduction"></a>
+# Introduction
+Mango4j-crypto is a framework which aims to simplify the implementation of Application Level Encryption (ALE) in Java applications, and ensure that applications follow a flexible and powerful design that can handle the many tricky scenarios that can occur when implementing the same.
+
+This documentation is aimed at providing both instructions on integrating the mango4j-crypto framework into your application and providing a more general discussion of implementing application level encryption (ALE) in your code.
+
+Much of the contents in this document can be
+used as a reference for developers who need to implement ALE regardless of whether they use mango4j-crypto or not. Developers should consider the guidelines documented in each section when building their own solutions.
 
 This documentation purposely avoids talking about specific cryptographic implementations. or standards (AES, PKCS#11, AWS KMS, etc.) because the core focus here is to talk about how
 to implement ALE (whatever cryptographic methods, standards or providers you use) and what general challenges exist along with guidance on overcoming them in your application.
 
-The following documentation uses some terms regularly which we'll define upfront:
+This documentation uses some terms regularly which we'll define upfront:
 
 *Tenant:* A term used to describe logical isolation in your system for a particular client entity. e.g. Some issuers have requirements that any confidential data of theirs that you
 store in your system should be segregated from data belonging to other entities. An application could spin up a full environment just for that issuer client or they can choose to
@@ -27,6 +53,8 @@ segregation guidelines. This 'tenant' approach is the usual one followed to enfo
 2. To support unique constraint enforcement on fields that are encrypted.
    The [FAQ](#Why-do-I-need-to-HMAC-data-in-order-to-make-it-searchable?) section at the bottom of this document explains this in more detail.
 
+[//]: # (<a name="mango-crypto-key-reference-driven-design"></a>)
+# 2. Mango Crypto-Key Driven Design
 Often when designing applications which have to implement Application Level Encryption it might seem to make sense to design only with some specific
 cryptographic provider in mind (e.g. Azure Dedicated HSM) but doing this could introduce complexities later if your application needs the potential to use different providers (different regions might have
 different cryptographic providers or regulations). You may need to perform a [key rotation](#What-is-a-key-rotation?) from one key which uses some cryptographic provider to a new
@@ -37,24 +65,34 @@ AWS KMS and its SDK to perform the encryption operation, if a CryptoKey has a ty
 approach hides the details from the application code which is generally good practice and allows for more flexibility if an application needs to use a different method to perform
 encryption later without needing any changes to existing application code.
 
-This library is very simple at its core and is intended to force application code into a tried and tested design for application level encryption which removes references to
-specific cryptographic providers from your code and allows you to handle encryption key rotation and [HMAC](#What's-a-HMAC?) key rotation more robustly. HMAC key rotation has a
+This library was designed to force application code into a tried and tested design for application level encryption which removes references to
+specific cryptographic providers from your code and allows you to handle encryption key rotation and HMAC key rotation more robustly. HMAC key rotation has a
 long section all of its own in this document which should be considered mandatory reading for all developers who need to HMAC data for lookup or unique constraint purposes.
+
+
+## Encryption Service Delegates
+
+In mango4j-crypto all the code for cryptographic operations is hidden behind an abstraction we refer to as the "Encryption Service Delegate" abstraction. What this means is that an infinite number of approaches can be used to perform the cryptographic operations by allowing developers to supply their own Encryption Service Delegates. Just create your own subclass of the [EncryptionServiceDelegate class](https://github.com/bitstep-ie/mango4j/blob/main/mango4j-crypto-core/src/main/java/ie/bitstep/mango/crypto/core/encryption/EncryptionServiceDelegate.java) and implement the abstract methods. Coupled with the CryptoKey objects this allows applications to support multiple
+types of cryptographic providers or different cryptographic approaches depending on application requirements. This also allows applications to support different cryptographic providers at the same time (e.g. different regions using different providers) without needing to change any application code. And it also allows keys to be rotated from one provider to another without needing to change any application code (and potentially without even restarting the application).
+mang4j-crypto comes with a few built-in Encryption Service Delegate implementations for common cryptographic providers: Wrapped Delegate - Usedbut you can create your own
+And developers can create their own Deleggate implementations to suit their needs. If you do create your own Encryption Service Delegate implementation which you think would be universally useful then please consider giving back by making it publicly available or even submitting a PR to the mango4j-crypto project so that others can benefit from it too.
+
 
 ## Key objects
 
-Everything in mango4j-crypto-core revolves around the CryptoKey object. These are objects that you will pass to the generic EncryptionService interface with your data in order to
-encrypt/HMAC it.
-We often see applications representing their encryption/HMAC keys in their code with simple Strings (representing an AWS KMS key ID or key ARN for example) rather than key objects, but you
-should strongly consider representing your key information with objects instead. For example, this library represents keys in the code with the following object:
+CryptoKey objects tell the library which Encryption Service Delegate to use to carry out the actual cryptographic operations under the hood.
+We often see applications representing their encryption/HMAC keys in their code with simple Strings (representing an AWS KMS key ID or key ARN for example) rather than key objects, but representing your key information with objects instead provides much more flexibility with how your encryption works. For example, this library represents keys in the code with the following object:
 
 ```java language=java
 public class CryptoKey {
 	private String id;
 	private CryptoKeyUsage usage;
 	private String type;
-	private String keyMaterial;
+	private Map<String, Object> configuration;
 	private Instant keyStartTime;
+	private RekeyMode rekeyMode;
+	private Instant createdDate;
+	private Instant lastModifiedDate;
 }
 ```
 
@@ -62,36 +100,30 @@ public class CryptoKey {
 
 *usage:* What this key will be used for (either encryption or HMAC)
 
-*type:* The encryption implementation mechanism that this key will use to carry out its cryptographic operations. For example: maybe you use Azure Dedicated HSM, in that case you could set this
-value to 'AZURE_DEDICATED_HSM'. If you use Amazon KMS with the SDK, you could set it to 'AWS_KMS'. You can define whatever types you like, they're the application's convention.
+*type:* The type of the Encryption Service Delegate that this key will use to carry out its cryptographic operations. This must match the value returned from the desired [EncryptionServiceDelegate.supportedCryptoKeyType()](https://github.com/bitstep-ie/mango4j/blob/main/mango4j-crypto-core/src/main/java/ie/bitstep/mango/crypto/core/encryption/EncryptionServiceDelegate.java#L17) implementation. For example: The included [CacheWrappedKeyEncryptionService.supportedCryptoKeyType()](https://github.com/bitstep-ie/mango4j/blob/main/mango4j-crypto-wrapped-delegate/src/main/java/ie/bitstep/mango/crypto/core/impl/service/encryption/CachedWrappedKeyEncryptionService.java#L251) returns the value "CACHED_WRAPPED", so if you wanted to use that Encryption Service Delegate implementation then you would have a CryptoKey object with this 'type' field set to "CACHED_WRAPPED". At runtime the library matches the CryptoKeys with their corresponding EncryptionServiceDelegates by comparing this 'type' field. If you create you own Encryption Service Delegate implementation, you can define this field however you like.
 
-*keyMaterial:* This field stores the information about the key that the encryption implementation/mechanism uses to carry out its operations. It would never contain the actual
-bytes of the key or related confidential information. Instead, it would contain a reference to the key. For example: if the 'type' of this key was AWS_KMS then this would just be set
-to the Key ID or Key ARN.
+*Configuration:* This field stores the information about the key that the Encryption Service Delegates use to carry out their operations. It would never contain the actual
+bytes of the key or related confidential information (at least not in the clear). Instead, it would usually contain a reference to the key. For example: if the 'type' of this key was AWS_KMS then this map would have an entry called "keyArn" with the value of the AWS Key ID or Key ARN. Each Encryption Service Delegate implementation will know what configuration information it needs to carry out its operations so the application just needs to make sure that the right information is present in this map for the given key type.
 
 *keyStartTime:* We can ignore this for now but it's related to the [Single Time Based HMAC Strategy](#Single-Time-Based-HMAC-Strategy) that's described further in this document.
 
-Using key objects like the above to represent cryptographic keys instead of just simple Strings is really no extra work and can keep your code flexible when it comes to supporting
-multiple approaches to encryption. One advantage is that it will allow you to easily support multiple cryptographic providers while keeping code clean and encryption code
-abstracted. It could also allow you to rotate from one type of key to another (e.g. AWS_KMS to AZURE_DEDICATED_HSM) with no code application code changes. Or you could support different
-encryption mechanisms in different regions without having to write any custom application code to support that.
-
-## Encryption logic abstraction
-
-Abstract all encryption related code behind an interface. This is just good practice anyway, and coupled with the CryptoKey objects will allow your application to support multiple
-types of cryptographic providers or different cryptographic approaches depending on application requirements. You can have a look at the EncryptionService interface in this library
-as a reference.
+<br>
+<br>
+A big advantage of using CryptoKey objects to represent cryptographic key information is that it allows applications to easily support multiple cryptographic providers while keeping code clean and encryption code
+abstracted. It could also allow you to rotate from one type of key to another (e.g. AWS_KMS to AZURE_DEDICATED_HSM) with no application code changes. Or you could support different
+encryption delegates in different regions without having to write any custom application code to support that.
 
 ## Ciphertext representation
 
-This library also has a standardised way of representing the final ciphertext (for encryption, not HMACs) which your application will store. Instead of just returning the straight
-ciphertext output it will return it in the following format:
+When [CryptoShield.encrypt()](https://github.com/bitstep-ie/mango4j/blob/main/mango4j-crypto/src/main/java/ie/bitstep/mango/crypto/CryptoShield.java#L202) is called on an object the library will set the [@EncryptedBlob](https://github.com/bitstep-ie/mango4j/blob/main/mango4j-crypto/src/main/java/ie/bitstep/mango/crypto/annotations/EncryptedBlob.java) field in the object to the calculated ciphertext.
+This final ciphertext is represented in a standardised way for encryption (not HMACs). Instead of just returning the straight
+ciphertext output it will return it as a JSON String with the following definition:
 
 ```json language=json
-JSON={
-	"cryptoKeyId": "someKeyId",
-	"iv": "someInitializationVector",
-	"cipherText": "generatedCipherText"
+{
+   "cryptoKeyId": "someKeyId", 
+   "iv": "someInitializationVector",
+   "data": {}
 }
 ```
 
@@ -99,16 +131,8 @@ where:
 
 - *cryptoKeyId* is the identifier of the crypto key object (e.g. the CryptoKey.id field) in your system that was used to carry out the cryptographic operation
 - *iv* is the [Initialization Vector](#What's-an-IV?) that was used for the cryptographic operation
-- *cipherText* is the actual ciphertext that was returned from the cryptographic operation
+- *data* is the actual output that was returned from the Encryption Service Delegate's encrypt() method. Each delegate may return different data here depending on the cryptographic provider or method that it uses, or what information it defines as necessary to include. This is why it's a map, because it needs to be flexible enough to accommodate different data structures that different EncryptionServiceDelegates define. 
 
-Storing the ciphertext in this format should give your application all the information it needs to decrypt the ciphertext. If your application needs to store the generated
-ciphertext in a different format you can register your own implementation of CipherTextFormatter using:
-
-```java language=java
-CipherTextFormatter.register(MyCipherTextFormatterImpl);
-```
-
-If designing your own ALE solution, consider representing your ciphertext in a format which gives you all the information you need to parse it properly, easily and decrypt it.
 
 ## HMAC Key Rotation Challenges
 
