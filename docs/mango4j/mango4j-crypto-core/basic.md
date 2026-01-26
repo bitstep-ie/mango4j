@@ -17,14 +17,20 @@
         1. [Process for re-keying data with the List HMAC Strategy](#process-for-re-keying-data-with-the-list-hmac-strategy)
     2. [Double HMAC Strategy](#double-hmac-strategy)
         1. [Process for re-keying data with the Double HMAC Strategy](#process-for-re-keying-data-with-the-double-hmac-strategy)
-8. [FAQ]()
-    1. [Why do I need to HMAC data in order to make it searchable?](#Why-do-I-need-to-HMAC-data-in-order-to-make-it-searchable?)
-    2. [What is a hash?](#What's-a-hash?)
-    3. [What's a HMAC?](#What'-s-a-HMAC?)
-    4. [What's an IV?](#What's-an-IV?)
-    5. [What is a tenant?](#What-is-a-tenant?)
-    6. [What is a key rotation?](#What-is-a-key-rotation?)
-    7. [What is HMAC tokenization?](#What-is-HMAC-tokenization?)
+8. [FAQ](#faq)
+    1. [What is a tenant?](#whats-a-tenant)
+    2. [What's a HMAC?](#Whats-a-hmac)
+    3. [What is a hash?](#whats-a-hash)
+    4. [What's an IV?](#whats-an-iv)
+    5. [Why do I need to HMAC data in order to make it searchable?](#why-do-I-need-to-HMAC-data-in-order-to-make-it-searchable)
+    6. [Why do I need to HMAC confidential data in order to make it unique?](#why-do-i-need-to-hmac-confidential-data-in-order-to-make-it-unique)
+    7. [What is a key rotation?](#what-is-a-key-rotation)
+    8. [Why would I perform a key rotation?](#why-would-i-perform-a-key-rotation)
+    9. [What does re-keying mean?](#what-does-re-keying-mean)
+    10. [Why should I re-key?](#why-should-i-re-key)
+    11. [Why does mango4j-crypto-core have the concept of only 1 encryption key but multiple HMAC keys?](#why-does-mango4j-crypto-core-have-the-concept-of-only-1-encryption-key-but-multiple-hmac-keys)
+    12. [Why don't HMACs have a reference to the HMAC key stored alongside them the same way encrypted ciphertext does?](#why-dont-hmacs-have-a-reference-to-the-hmac-key-stored-alongside-them-the-same-way-encrypted-ciphertext-does)
+    13. [What is HMAC tokenization?](#what-is-hmac-tokenization)
 
 <a name="introduction"></a>
 
@@ -722,65 +728,46 @@ The process for re-keying data is the same as the Single HMAC Strategy
 
 ### Some final considerations for application designs
 
-Although corporate security guidelines in some companies may only require applications to support passive HMAC key
-rotation we strongly advise application developers to reconsider this in the context of
-their application functionality and requirements! Supporting only passive HMAC key rotation for long-lived data means
-that there's a strong possibility that you cannot ever
-deprecate any of a tenant's HMAC keys. Every time you update a tenant to a new HMAC key (meaning that you add a new one
-into the tenant's list of keys) then your application's
+Although corporate security guidelines in some companies may only require applications to support HMAC key
+rotation but not necessarily rekeying, we strongly advise application developers to reconsider this in the context of
+their application functionality and requirements! Supporting only HMAC key rotation for long-lived data means
+that there's a strong possibility that you cannot ever deprecate any of a tenant's HMAC keys. Every time you update a
+tenant to a new HMAC key (meaning that you add a new one into the tenant's list of keys) then your application's
 search operations will progressively get slower. This is because if a tenant has N HMAC keys we have to calculate N
-HMACs when we search for something. Since we can't remove a
-tenant's keys (because there may be records that have never been modified since being written with the key in use at
-that time) then we'll have to keep using all of them to
+HMACs when we search for something. Since we can't remove a tenant's keys (because there may be records that have never
+been modified since being written with the key in use at that time) then we'll have to keep using all of them to
 generate HMACs for every operation until the end of time.
 Also, although challenge 1 above will still be solved in a functional sense, challenge 2 still remains a serious problem
-in your application (if you have unique constraint
-requirements). The only way to solve challenge 2 for passive key rotation for long-lived data would be to use the List
-HMAC Strategy. Otherwise, some re-keying job is necessary.
-
-## How do I use this library?
-
-The main interface to this library is the EncryptionService interface. To use it you need to implement just a few
-things:
-
-* Implement the CryptoKeyProvider interface.
-* During the startup of your application register your CryptoKeyProvider implementation with
-  CryptoKeyProviderSupplier.register()
-* Create any concrete implementations of EncryptionService that your application will need to use to carry out
-  cryptographic operations.
-* During the startup of your application register your EncryptionService implementations using
-  EncryptionService.register()
-* Your EncryptionService implementation needs to return a unique text value from the
-  EncryptionService.supportedKeyType() method. You can see an example of this by looking at the
-  Base64EncryptionService class which comes with the library for testing/local development purposes.
-
-That's it. Once you do this you can execute cryptographic operations from your code by calling
-EncryptionService.encrypt(), EncryptionService.decrypt() and
-EncryptionService.hmac().
-
-Please see the [mango4j-crypto-core-example](TBD) module in
-the [mango4j-examples repository](TBD) for a sample spring application that uses this library.
+in your application (if you have unique constraint requirements). The only concrete way to solve challenge 2 for key
+rotation
+(without rekey) for long-lived data would be to use the List HMAC Strategy.
+<br>
+<br>
 
 ## FAQ
 
-### What is a tenant?
+### What's a tenant?
 
 For applications which store data from different client applications or enterprises there is often the requirement that
 we need to segregate the data belonging to each client (i.e. your application has multiple customer enterprises which
-use it:
-Bank A, Bank B and Bank C). Company requirements (and regulations) can sometimes dictate that the data which your
-application stores related to each of these customers must be logically separated from each other. This is to limit the
-exposure
-which might happen in a security breach. Your application could spin up 3 separate (and isolated) environments for each
-customer but this is often too costly to maintain. An easier and equivalent way to do this is to have the concept of
-'tenants' in your application. Each customer is a 'tenant' and each tenant has separate encryption keys. So your
-application will store and configure tenant information (which will
+use it: Bank A, Bank B and Bank C).
+<br>
+Company requirements (and regulations) can sometimes dictate that the data which your application stores related to each
+of these customers must be logically separated from each other. This is to limit the exposure which might happen in a
+security breach. Your application could spin up 3 separate (and isolated) environments for each customer but this is
+often
+too costly to maintain.
+<br>
+An easier and equivalent way to do this is to have the concept of 'tenants' in your application. Each customer is a '
+tenant'
+and each tenant has separate encryption keys. So your application will store and configure tenant information (which
+will
 include the details of encryption and HMAC keys for each tenant).
+<br>
 Each operation in your application will then be within the context of one of these tenants. Any data stored
 for Bank A is encrypted with an encryption key which is _only_ used by Bank A, And similarly, any data stored
 for Bank B is encrypted with an encryption key which is _only_ used by Bank B. If your system doesn't have/need the
-concept
-of tenants then you can just think of a tenant as "your entire application" in this documentation.
+concept of tenants then you can just think of a tenant as "the application" in this documentation.
 
 ### What's a HMAC?
 
@@ -789,36 +776,35 @@ A HMAC is just a hash which uses a secret key to perform the hashing operation.
 ### What's a hash?
 
 A hash is a one-way encryption cipher. One-way means that for a given piece of data, hashing it will produce a
-ciphertext but that ciphertext can never be used to reproduce the
-original value, it can never be decrypted. HMACs are useful for storing data that needs to be matched but which we never
-want to risk an attacker knowing. HMACs are often used to
-store passwords in a secure system.
+ciphertext
+but that ciphertext can never be used to reproduce the original value, it can never be decrypted. Hashes are useful for
+storing data that needs to be matched but which we never want to risk an attacker knowing. Hashes are often used to
+store
+passwords in a secure system.
 
 ### What's an IV?
 
 An IV (Initialization Vector) essentially introduces randomness into the data being encrypted. A new IV should be
-generated and used for every encryption operation which means that
-even if you encrypt the same piece of data with the same secret key, the resulting cipher text will be different. The
-cipher text will always decrypt successfully to the original
-data (the IV is actually stored inside the blob containing the ciphertext) but the fact that the resulting ciphertext is
-always unique for any encryption operation makes
-cryptanalysis more difficult to potential attackers.
+generated and used for every encryption operation which means that even if you encrypt the same piece of data with the
+same
+secret key, the resulting ciphertext will be different. The ciphertext will always decrypt successfully to the original
+data (the IV is actually stored in the clear, inside the data containing the ciphertext) but the fact that the resulting
+ciphertext is
+always unique for any encryption operation makes cryptanalysis more difficult to potential attackers.
 
 ### Why do I need to HMAC data in order to make it searchable?
 
 When we encrypt a piece of data we should use an [IV](#What's-an-IV?) as well as the secret key - so make sure to
-consider using IVs in any
-custom EncryptionService implementations you create for your application. Due to the fact that each time we encrypt a
-piece of data it never generates the same ciphertext this means
+consider using IVs in any custom EncryptionServiceDelegate implementations you create for your application.
+Due to the fact that each time we encrypt a piece of data it never generates the same ciphertext this means
 that we cannot search on that attribute. It may be tempting to think that for a search operation you could encrypt the
-incoming search value and look for matching ciphertext in the
-DB but since the ciphertext just generated for the incoming search term is guaranteed unique (due to the use of an IV)
-it won't match anything. The solution is to store a HMAC
+incoming search value and look for matching ciphertext in the DB. But since the ciphertext just generated for the
+incoming
+search term is guaranteed unique (due to the use of an IV) it won't match anything. The solution is to store a HMAC
 value alongside any attribute that needs to be searchable. HMACs will always give the same HMAC value for the same piece
-of data so they can be used for search purposes. If an
-encrypted attribute also has a HMAC value stored separately for it, search operations can HMAC the incoming search term
-and search for the resulting HMAC value in the DB.
-Their irreversibility makes them secure.
+of data so they can be used for search purposes. If an encrypted attribute also has a HMAC value stored separately for
+it,
+Their irreversibility makes them very secure.
 
 ### Why do I need to HMAC confidential data in order to make it unique?
 
@@ -835,38 +821,26 @@ different one.
 ### Why would I perform a key rotation?
 
 Many corporate and regulatory guidelines require encryption keys to be updated when certain criteria are met. The
-criteria definitions are a bit fuzzy and there's no permanent concrete
+criteria definitions can sometimes be a bit fuzzy and there's no permanent concrete
 criteria for all applications. Some criteria are usage based, e.g. changing the key after it's been used X times. Other
 criteria are time based, e.g. change the key every X period.
-Please consult the official SE Guild publications for prescriptions on when you need to rotate encryption and HMAC keys
+Please consult your corporate security guidance or the appropriate regulations for prescriptions on when you need to
+rotate encryption and HMAC keys
 in your application.
 
 The following points should also be taken into consideration when deciding when a key might need to be rotated:
 
-* If a key becomes compromised then it is necessary to remove it from the system, which requires rotating to a new key.
-  This could happen at any time.
+* If a key becomes compromised then it is necessary to remove it from the system, which requires rotating to a new key
+  (most likely followed by a rekey). This could happen at any time.
 * If new company or national regulations decide that the crypto period needs to be some different prescription than
-  current company/national requirements.
+  current company/regulatory requirements.
 * Some Cryptographic providers may stop being available in certain regions or deployment environments. In that case,
   application instances deployed in those environments will have
   to rotate keys onto a different cryptographic provider.
 
-### What does passive key rotation mean?
-
-Passive key rotation is the act of only using a new key going forward. So existing data can be left encrypted with the
-old key, whereas normal write operations encrypt with the new
-key. Even for read operations, when existing data is read from the database the application should also re-encrypt this
-data with the new key and re-save it again before returning
-the data. Passive key rotation can more easily satisfy applications with lenient data retention rules. Because if data
-is not long-lived then you know that you can eventually
-delete the older keys (and any data encrypted with them). However, many applications won't have this luxury and should
-consider re-keying data over time so that they can eventually
-remove old keys.
-
 ### What does re-keying mean?
 
-Re-keying (referred to as _active key rotation_ in previous iterations of this document) is where after introducing a
-new encryption/HMAC key, some background job goes through the
+Re-keying is where after introducing a new encryption/HMAC key, some background job goes through the
 database record by record, decrypting (with the old key) and re-encrypting (re-keying) with the new key(s) until there
 are no more records left that use the old key(s).
 
@@ -912,21 +886,22 @@ definition that means that you have no information about the row where the HMAC 
 encrypted ciphertext it's different, you already know the
 row (maybe your application accessed it directly by ID, or maybe you've searched for and found it). So once you have the
 row then it's good that it has a reference to the
-encryption key that was used, so now you can use that key to decrypt it. With HMACs you're trying to use them to find
+encryption key that was used, so now you can use that key reference to decrypt it. With HMACs you're trying to use them
+to find
 the row in the first place and once you've found the row,
 having a reference to the HMAC key would serve no extra purpose. In summary, you never know where the HMAC you're
 looking for is or which HMAC key might have been used to calculate
 it, so storing the HMAC key reference alongside it won't help you with anything. And again, This is why you must try all
 possible HMAC keys when searching.
 
-*Caveat:* In saying that, it is useful to store a reference to the HMAC key alongside the HMAC so that re-key jobs know
-which records need re-keyed and which do not. But this is a
-convenience related to re-keying functionality only and is not related to normal HMAC functionality.
+*Caveat:* In saying that, it is useful to store a reference to the HMAC key alongside the HMAC so that re-key jobs can
+easily query which records need re-keyed and which do not. But this is a
+convenience related to re-keying performance only and is not related to normal HMAC functionality.
 
 ### What is HMAC tokenization?
 
 HMAC Tokenization is the process of chopping an input value into separate pieces and calculating HMACs for each piece
-for more flexible search support. i.e. for a PAN you could
+for more flexible search support. i.e. for a PAN (Primary Account Number - such as Credit Card numbers) you could
 HMAC the full PAN, HMAC the last 4 digits of the PAN, HMAC the PAN without dashes/spaces giving a total of 3 resulting
 HMACs for a single input. This allows you to support richer
 search capabilities because now your application can support searching on the last 4 digits of the PAN and allows
@@ -940,7 +915,8 @@ searches to find a PAN whether it has dashes/spaces in it or not.
 
 ### B: Possible re-keying process when using list HMAC strategy when the application need to delete a specific HMAC key
 
-When your application mostly runs on passive key rotation, but you need to support a process whereby a HMAC key needs to
+When your application mostly runs on key rotation without rekeying, but you need to support a process whereby a HMAC key
+needs to
 be completely removed from the system then you can follow
 steps similar to below:
 
@@ -960,7 +936,8 @@ Substitute key: The HMAC key that was next introduced to the system after the de
 
 #### Case study for an application which uses the List HMAC Strategy and has the unique constraint challenge
 
-Background: ACME unique application is an application that relies primarily on passive HMAC key rotation to manage the
+Background: ACME unique application is an application that relies solely on HMAC key rotation (without rekeying) to
+manage the
 keying of records over time. ACME application also requires
 unique constraints on highly confidential fields, so it uses the List HMAC Strategy. The application introduces a new
 HMAC key into the system every year. After 4 years it is
@@ -1018,7 +995,7 @@ the HMAC key list will temporarily grow to 5 keys and shrink back to 4.
 
 In any year, there are only ever a maximum of N-1 periods which don't need re-keying.
 
-The approach to using 4 HMAC keys (as in this example) probably doesn't make much sense in the end. Using 2 keys and
+The approach to using 4 HMAC keys (as in this example) might not make much sense in the end. Using 2 keys and
 just doing a full re-key to the new key each year would most
 likely make more sense. The reason being is that as the application continues in time the number of periods that need
 re-keyed will be much greater than the number that don't (in

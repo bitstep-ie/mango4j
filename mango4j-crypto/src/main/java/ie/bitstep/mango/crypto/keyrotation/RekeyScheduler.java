@@ -1,21 +1,13 @@
 package ie.bitstep.mango.crypto.keyrotation;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import ie.bitstep.mango.crypto.CryptoShield;
 import ie.bitstep.mango.crypto.RekeyCryptoShield;
-import ie.bitstep.mango.crypto.annotations.EncryptedBlob;
 import ie.bitstep.mango.crypto.core.domain.CryptoKey;
 import ie.bitstep.mango.crypto.core.domain.CryptoKeyUsage;
-import ie.bitstep.mango.crypto.core.encryption.EncryptionService;
-import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
-import ie.bitstep.mango.crypto.keyrotation.exceptions.RekeySchedulerInitializationException;
 import ie.bitstep.mango.crypto.keyrotation.exceptions.TooManyFailuresException;
 
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +15,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -45,254 +36,18 @@ public class RekeyScheduler {
 	private static final String[] ORDINAL_SUFFIXES = new String[]{"th", "st", "nd", "rd", "th", "th", "th", "th", "th", "th"};
 
 	private final System.Logger logger = System.getLogger(RekeyScheduler.class.getName());
+	private final RekeySchedulerConfig rekeySchedulerConfig;
 
-	private Collection<RekeyService<?>> rekeyServices;
-	private ObjectMapper objectMapper;
-	private Clock clock;
-	private int initialDelay;
-	private Duration cryptoKeyCacheDuration;
-	private Duration batchInterval = Duration.ZERO;
-	private int maximumToleratedFailuresPerExecution = -1;
-	private RekeyCryptoKeyManager rekeyCryptoKeyManager;
-	private int rekeyCheckInterval;
-	private TimeUnit rekeyTimeUnits;
-	private CryptoShield cryptoShield;
-
-	public RekeyScheduler() {
-	}
-
-	/**
-	 * Mandatory method. The usual {@link CryptoKeyProvider} implementation used by your application
-	 *
-	 * @return this
-	 */
-	public RekeyScheduler withCryptoShield(CryptoShield cryptoShield) {
-		this.cryptoShield = cryptoShield;
-		return this;
-	}
-
-	/**
-	 * Mandatory method: Sets all the application's {@link RekeyService} implementations that this scheduler will use to rekey records
-	 *
-	 * @param rekeyServices All {@link RekeyService} implementations for the application. There should be 1 {@link RekeyService}
-	 *                      per entity that uses encryption.
-	 * @return this
-	 */
-	public RekeyScheduler withRekeyServices(Collection<RekeyService<?>> rekeyServices) {
-		this.rekeyServices = rekeyServices;
-		return this;
-	}
-
-	/**
-	 * Mandatory method: Sets the {@link RekeyCryptoKeyManager} implementation that this scheduler will use to delete keys that are
-	 * no longer in use.
-	 *
-	 * @param rekeyCryptoKeyManager {@link RekeyCryptoKeyManager} implementation for the application.
-	 * @return this
-	 */
-	public RekeyScheduler withRekeyCryptoManager(RekeyCryptoKeyManager rekeyCryptoKeyManager) {
-		this.rekeyCryptoKeyManager = rekeyCryptoKeyManager;
-		return this;
-	}
-
-	/**
-	 * Mandatory method: The {@link ObjectMapper} to use for generating the final ciphertext for
-	 * &#64;{@link EncryptedBlob EncryptedBlob} fields.
-	 * This should be the same as the one supplied to {@link CryptoShield}.
-	 * We need it to be supplied here also because internally this class instantiates new {@link CryptoShield}
-	 * instances for each rekey.
-	 *
-	 * @param objectMapper {@link ObjectMapper} implementation to use for
-	 *                     &#64;{@link EncryptedBlob EncryptedBlob} ciphertext formatting
-	 * @return this
-	 */
-	public RekeyScheduler withObjectMapper(ObjectMapper objectMapper) {
-		this.objectMapper = objectMapper;
-		return this;
-	}
-
-	/**
-	 * Mandatory method
-	 *
-	 * @param clock clock instance to use.
-	 * @return this
-	 */
-	public RekeyScheduler withClock(Clock clock) {
-		this.clock = clock;
-		return this;
-	}
-
-	/**
-	 * Mandatory method: This is an extremely important field to set and applications must make sure to set it to the correct value.
-	 * Failure to set this to the correct value may have negative consequences for application functionality during a rekey job.
-	 * If your application is multi-instance and caches {@link CryptoKey} data for performance reasons (very common) then
-	 * there is a period of time after a new key is created in the system before all instances know about it. If a
-	 * rekey job kicked off before this period then it would start to rekey encrypted data/HMACs to a key that some
-	 * instances don't know about. In the case of HMACs this will result in search misses and possibly the more
-	 * serious duplicate values problem (if HMACs are used to enforce uniqueness).
-	 *
-	 * @param cryptoKeyCacheDuration The length of time your application instances cache {@link CryptoKey CryptoKeys}
-	 *                               for (if applicable). If not applicable then just set it to {@link Duration#ZERO}. Cannot be null.
-	 * @return this
-	 */
-	public RekeyScheduler withCryptoKeyCachePeriod(Duration cryptoKeyCacheDuration) {
-		this.cryptoKeyCacheDuration = cryptoKeyCacheDuration;
-		return this;
-	}
-
-	/**
-	 * Optional method: To avoid overwhelming the application database and {@link EncryptionService}
-	 * implementations, you can set this field to some duration. After each batch of records is re-keyed this library
-	 * will sleep for this length of time before it asks {@link RekeyService#findRecordsNotUsingCryptoKey(CryptoKey)}
-	 * or {@link RekeyService#findRecordsUsingCryptoKey(CryptoKey)} for another batch of records to rekey.
-	 *
-	 * @param batchInterval The amount of time to sleep after a batch of records is re-keyed.
-	 * @return this
-	 */
-	public RekeyScheduler withBatchInterval(Duration batchInterval) {
-		this.batchInterval = batchInterval;
-		return this;
-	}
-
-	/**
-	 * Optional method: You can set a maximum value for failures for each rekey job that gets kicked off after which the
-	 * job will abort. So if this class encounters some problems decrypting, re-encrypting or saving records then this job will abort
-	 * this run of the process.
-	 *
-	 * @param maximumToleratedFailuresPerExecution The number of rekey failures that will trigger this library to abort
-	 *                                             the rekey job (per tenant if applicable)
-	 * @return this
-	 */
-	public RekeyScheduler withMaximumToleratedFailuresPerExecution(int maximumToleratedFailuresPerExecution) {
-		this.maximumToleratedFailuresPerExecution = maximumToleratedFailuresPerExecution;
-		return this;
-	}
-
-	/**
-	 * Mandatory method: This specifies the scheduling settings for this rekey Scheduler.
-	 *
-	 * @param initialDelay       The time after the {@link RekeyScheduler#start()} method is called which you want to wait before the first rekey job begins.
-	 * @param rekeyCheckInterval The period of time between subsequent rekey jobs. Since rekey operations are usually
-	 *                           quite rare setting this to once a day is probably adequate. This scheduler will wake up and check for any pending
-	 *                           KEY_ON/KEY_OFF jobs (as signaled by the {@link CryptoKey#rekeyMode}) field.
-	 * @param rekeyTimeUnits     The time units that initialDelay and rekeyCheckInterval parameters are specified in.
-	 * @return this
-	 */
-	public RekeyScheduler withRekeyCheckInterval(int initialDelay, int rekeyCheckInterval, TimeUnit rekeyTimeUnits) {
-		this.initialDelay = initialDelay;
-		this.rekeyCheckInterval = rekeyCheckInterval;
-		this.rekeyTimeUnits = rekeyTimeUnits;
-		return this;
-	}
-
-	/**
-	 * Schedules a reoccurring rekey job as per the specified settings.
-	 */
-	public void start() {
-		validateSettings();
+	public RekeyScheduler(RekeySchedulerConfig rekeySchedulerConfig) {
+		this.rekeySchedulerConfig = rekeySchedulerConfig;
 		ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-		scheduler.scheduleAtFixedRate(this::rekeyTenants, initialDelay, rekeyCheckInterval, rekeyTimeUnits);
-	}
-
-	private void validateSettings() {
-		boolean isValid = areRekeyServicesValid()
-				&& isObjectMapperValid()
-				&& isClockValid()
-				&& isCryptoKeyCacheDurationValid()
-				&& isRekeyCryptoManagerValid()
-				&& isRekeyCheckIntervalValid()
-				&& areRekeyTimeUnitsValid()
-				&& isBatchIntervalValid();
-
-		if (!isValid) {
-			throw new RekeySchedulerInitializationException();
-		}
-	}
-
-	private boolean isBatchIntervalValid() {
-		boolean isValid = true;
-		if (batchInterval == null) {
-			logger.log(ERROR, "batchInterval field was set to null. " +
-					"Please make sure to set it to a non-null value using the withBatchInterval() method");
-			isValid = false;
-		}
-		return isValid;
-	}
-
-	private boolean areRekeyTimeUnitsValid() {
-		boolean isValid = true;
-		if (rekeyTimeUnits == null) {
-			logger.log(ERROR, "rekeyTimeUnits field was set to null. " +
-					"Please make sure to set it to a non-null value using the withRekeyTimeUnits() method");
-			isValid = false;
-		}
-		return isValid;
-	}
-
-	private boolean isRekeyCheckIntervalValid() {
-		boolean isValid = true;
-		if (rekeyCheckInterval == 0) {
-			logger.log(ERROR, "rekeyCheckInterval field was set to 0. " +
-					"Please make sure to set it to a positive non-zero integer value using the withRekeyCheckInterval() method");
-			isValid = false;
-		}
-		return isValid;
-	}
-
-	private boolean isRekeyCryptoManagerValid() {
-		boolean isValid = true;
-		if (rekeyCryptoKeyManager == null) {
-			logger.log(ERROR, "rekeyCryptoKeyManager field was set to a null value . " +
-					"Please make sure to set it to a non-null value using the withRekeyCryptoKeyManager() method");
-			isValid = false;
-		}
-		return isValid;
-	}
-
-	private boolean isCryptoKeyCacheDurationValid() {
-		boolean isValid = true;
-		if (cryptoKeyCacheDuration == null) {
-			logger.log(ERROR, "cryptoKeyCacheDuration field was set to a null value . " +
-					"Please make sure to set it to a non-null value using the withCryptoKeyCachePeriod() method");
-			isValid = false;
-		}
-		return isValid;
-	}
-
-	private boolean isClockValid() {
-		boolean isValid = true;
-		if (clock == null) {
-			logger.log(ERROR, "Clock field was set to a null value . " +
-					"Please make sure to set it to a non-null value using the withClock() method");
-			isValid = false;
-		}
-		return isValid;
-	}
-
-	private boolean isObjectMapperValid() {
-		boolean isValid = true;
-		if (objectMapper == null) {
-			logger.log(ERROR, "ObjectMapper field was set to a null value . " +
-					"Please make sure to set it to a non-null value using the withObjectMapper() method");
-			isValid = false;
-		}
-		return isValid;
-	}
-
-	private boolean areRekeyServicesValid() {
-		boolean isValid = true;
-		if (rekeyServices == null || rekeyServices.isEmpty()) {
-			logger.log(ERROR, "RekeyServices field was set to a{0} value . " +
-					"Please make sure to set it to a non-empty collection using the withRekeyServices() method", rekeyServices == null ? " null" : "n empty");
-			isValid = false;
-		}
-		return isValid;
+		scheduler.scheduleAtFixedRate(this::rekeyTenants, this.rekeySchedulerConfig.getInitialDelay(), this.rekeySchedulerConfig.getRekeyCheckInterval(), this.rekeySchedulerConfig.getRekeyTimeUnits());
 	}
 
 	private void rekeyTenants() {
 		logger.log(TRACE, "Beginning rekey job");
 		Map<String, List<CryptoKey>> allEncryptionKeys = new HashMap<>();
-		for (CryptoKey cryptoKey : cryptoShield.getCryptoKeyProvider().getAllCryptoKeys()) {
+		for (CryptoKey cryptoKey : rekeySchedulerConfig.getCryptoShield().getCryptoKeyProvider().getAllCryptoKeys()) {
 			// HashMap allows null keys so if the app doesn't have tenants then cryptokey.getTenantId() can return null and
 			// this functionality will still work fine
 			allEncryptionKeys.computeIfAbsent(cryptoKey.getTenantId(), tenantId -> new ArrayList<>()).add(cryptoKey);
@@ -352,7 +107,7 @@ public class RekeyScheduler {
 		if (tenantLatestEncryptionKey == null) {
 			logger.log(INFO, "No encryption key was found{0}.....skipping the currently scheduled encryption rekey tasks for this tenant ", tenantLogString(tenantId));
 			return;
-		} else if (tenantLatestEncryptionKey.getCreatedDate().plus(cryptoKeyCacheDuration).isAfter(now())) {
+		} else if (tenantLatestEncryptionKey.getCreatedDate().plus(rekeySchedulerConfig.getCryptoKeyCacheDuration()).isAfter(now())) {
 			logger.log(DEBUG, "Some application instances might not be using the new encryption key yet{0}.....skipping the currently scheduled encryption rekey task for this tenant", tenantLogString(tenantId));
 			return;
 		}
@@ -361,7 +116,7 @@ public class RekeyScheduler {
 			logger.log(TRACE, "RekeyMode is set to {0} on the latest encryption key{1}", KEY_ON, tenantLogString(tenantId));
 			if (doAnyEncryptedRecordsNeedRekeying(keyOnRecordSupplier(tenantLatestEncryptionKey))) {
 				logger.log(TRACE, "Some records need re-encrypted{0}", tenantLogString(tenantId));
-				RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(cryptoShield, tenantLatestEncryptionKey, null);
+				RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(rekeySchedulerConfig.getCryptoShield(), tenantLatestEncryptionKey, null);
 				long totalEncryptedRecordsRekeyedForTenant = rekey(tenantLatestEncryptionKey, rekeyCryptoShield, keyOnRecordSupplier(tenantLatestEncryptionKey));
 				logger.log(INFO, "Full re-key of all records has been completed{0}. Total of {1} records rekeyed to {2} by this job", tenantLogString(tenantId), totalEncryptedRecordsRekeyedForTenant, tenantLatestEncryptionKey);
 			} else {
@@ -375,11 +130,11 @@ public class RekeyScheduler {
 				return;
 			}
 			for (CryptoKey encryptionKey : tenantEncryptionKeysSortedByDateDescending.subList(1, tenantEncryptionKeysSortedByDateDescending.size())) {
-				if (encryptionKey.getRekeyMode() == KEY_OFF && encryptionKey.getCreatedDate().plus(cryptoKeyCacheDuration).isBefore(now())) {
+				if (encryptionKey.getRekeyMode() == KEY_OFF && encryptionKey.getCreatedDate().plus(rekeySchedulerConfig.getCryptoKeyCacheDuration()).isBefore(now())) {
 					logger.log(TRACE, "Checking if there are any records using {0} to rekey", encryptionKey);
 					if (doAnyEncryptedRecordsNeedRekeying(keyOffRecordSupplier(encryptionKey))) {
 						logger.log(TRACE, "Some records need rekeyed{0}", tenantLogString(tenantId));
-						RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(cryptoShield, tenantLatestEncryptionKey, null);
+						RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(rekeySchedulerConfig.getCryptoShield(), tenantLatestEncryptionKey, null);
 						long totalEncryptedRecordsRekeyedForTenant = rekey(tenantLatestEncryptionKey, rekeyCryptoShield, keyOffRecordSupplier(encryptionKey));
 						logger.log(INFO, "All records ({0}) using deprecated encryption key {1} have been keyed onto the current encryption key {2}",
 								totalEncryptedRecordsRekeyedForTenant, encryptionKey, tenantLatestEncryptionKey);
@@ -424,7 +179,7 @@ public class RekeyScheduler {
 		if (hmacKeyToRekeyTo.isEmpty()) {
 			logger.log(ERROR, "No valid HMAC key found to rekey to{0}.....skipping HMAC rekey for this tenant", tenantLogString(tenantId));
 			return;
-		} else if (hmacKeyToRekeyTo.get().getCreatedDate().plus(cryptoKeyCacheDuration).isAfter(now())) {
+		} else if (hmacKeyToRekeyTo.get().getCreatedDate().plus(rekeySchedulerConfig.getCryptoKeyCacheDuration()).isAfter(now())) {
 			logger.log(DEBUG, "Some application instances might not be using some of the HMAC keys yet{0}....." +
 							"skipping the currently scheduled HMAC rekey tasks{0}",
 					tenantLogString(tenantId));
@@ -435,7 +190,7 @@ public class RekeyScheduler {
 		if (tenantHmacKeysSortedByDateDescending.isEmpty()) {
 			logger.log(INFO, "No HMACs to rekey{0}", tenantLogString(tenantId));
 			return;
-		} else if (hmacKeyToRekeyTo.get().getCreatedDate().plus(cryptoKeyCacheDuration).isAfter(now())) {
+		} else if (hmacKeyToRekeyTo.get().getCreatedDate().plus(rekeySchedulerConfig.getCryptoKeyCacheDuration()).isAfter(now())) {
 			logger.log(DEBUG, "Some application instances might not be using some of the HMAC keys yet{0}....." +
 							"skipping the currently scheduled HMAC rekey tasks{0}",
 					tenantLogString(tenantId));
@@ -444,7 +199,7 @@ public class RekeyScheduler {
 
 		if (doAnyRecordsWithHmacsNeedRekeying(tenantHmacKeysSortedByDateDescending)) {
 			if (tenantHmacKeysSortedByDateDescending.get(0).getRekeyMode() == KEY_ON) {
-				RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(cryptoShield, null, hmacKeyToRekeyTo.get());
+				RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(rekeySchedulerConfig.getCryptoShield(), null, hmacKeyToRekeyTo.get());
 				long totalHmacRecordsRekeyedToTheCurrentKey = rekey(hmacKeyToRekeyTo.get(), rekeyCryptoShield, keyOnRecordSupplier(hmacKeyToRekeyTo.get()));
 				logger.log(INFO, "Full HMAC re-key of all ({0}) records has been completed{1}", totalHmacRecordsRekeyedToTheCurrentKey, tenantLogString(tenantId));
 				for (CryptoKey tenantHmacKey : tenantHmacKeysSortedByDateDescending) {
@@ -459,7 +214,7 @@ public class RekeyScheduler {
 				tenantHmacKeysSortedByDateDescending.stream()
 						.filter(hmacKey -> hmacKey.getRekeyMode() == KEY_OFF)
 						.forEach(deprecatedHmacKey -> {
-							RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(cryptoShield, null, hmacKeyToRekeyTo.get());
+							RekeyCryptoShield rekeyCryptoShield = new RekeyCryptoShield(rekeySchedulerConfig.getCryptoShield(), null, hmacKeyToRekeyTo.get());
 							long totalHmacRecordsRekeyedForThisKey = rekey(deprecatedHmacKey, rekeyCryptoShield, keyOffRecordSupplier(deprecatedHmacKey));
 							logger.log(INFO, "HMAC re-key of all ({0}) records using deprecated HMAC key {1} has been completed{2}",
 									totalHmacRecordsRekeyedForThisKey, deprecatedHmacKey, tenantLogString(tenantId));
@@ -470,13 +225,13 @@ public class RekeyScheduler {
 	}
 
 	private boolean canBeRemoved(CryptoKey tenantHmacKey) {
-		return tenantHmacKey.getCreatedDate().plus(cryptoKeyCacheDuration).isBefore(now());
+		return tenantHmacKey.getCreatedDate().plus(rekeySchedulerConfig.getCryptoKeyCacheDuration()).isBefore(now());
 	}
 
 	private boolean doAnyEncryptedRecordsNeedRekeying(Function<RekeyService<?>, List<?>> recordsNeedingRekeyedFunction) {
 		List<?> recordsNeedingRekeyed;
 		boolean doAnyRecordsNeedRekeying = false;
-		for (RekeyService<?> rekeyService : rekeyServices) {
+		for (RekeyService<?> rekeyService : rekeySchedulerConfig.getRekeyServices()) {
 			try {
 				recordsNeedingRekeyed = getRecords(rekeyService, recordsNeedingRekeyedFunction);
 				if (recordsNeedingRekeyed != null && !recordsNeedingRekeyed.isEmpty()) {
@@ -504,7 +259,7 @@ public class RekeyScheduler {
 				recordsNeedingRekeyedFunction = keyOffRecordSupplier(tenantHmacKey);
 			}
 			if (recordsNeedingRekeyedFunction != null) {
-				for (RekeyService<?> rekeyService : rekeyServices) {
+				for (RekeyService<?> rekeyService : rekeySchedulerConfig.getRekeyServices()) {
 					List<?> recordsNeedingRekeyed = getRecords(rekeyService, recordsNeedingRekeyedFunction);
 					if (recordsNeedingRekeyed != null && !recordsNeedingRekeyed.isEmpty()) {
 						doAnyRecordsNeedRekeying = true;
@@ -531,7 +286,7 @@ public class RekeyScheduler {
 		if (tenantHmacKeysSortedByDateDescending.isEmpty()) {
 			logger.log(DEBUG, "No HMAC keys exist{0}", tenantLogString(tenantAllCryptoKeysSortedByDateDescending.get(0).getTenantId()));
 			return Optional.empty();
-		} else if (tenantHmacKeysSortedByDateDescending.stream().anyMatch(cryptoKey -> cryptoKey.getCreatedDate().plus(cryptoKeyCacheDuration).isAfter(now()))) {
+		} else if (tenantHmacKeysSortedByDateDescending.stream().anyMatch(cryptoKey -> cryptoKey.getCreatedDate().plus(rekeySchedulerConfig.getCryptoKeyCacheDuration()).isAfter(now()))) {
 			logger.log(DEBUG, "Some application instances might not be using some of the HMAC keys yet{0}....." +
 							"so we''ll skip rekeying any HMACs{0}",
 					tenantLogString(tenantHmacKeysSortedByDateDescending.get(0).getTenantId()));
@@ -579,14 +334,14 @@ public class RekeyScheduler {
 		logger.log(DEBUG, "Running re-key job. Keying {0} CryptoKey: {1}",
 				keyThatTriggeredTheRekey.getRekeyMode() == KEY_OFF ? "off" : "on", keyThatTriggeredTheRekey);
 		AtomicLong count = new AtomicLong();
-		rekeyServices.forEach((rekeyService) -> {
+		rekeySchedulerConfig.getRekeyServices().forEach((rekeyService) -> {
 			logger.log(DEBUG, "Checking for records to re-key for entity {0}", rekeyService.getEntityType().getName());
-			ProgressTracker entityRekeyProgressTracker = new ProgressTracker(maximumToleratedFailuresPerExecution);
+			ProgressTracker entityRekeyProgressTracker = new ProgressTracker(rekeySchedulerConfig.getMaximumToleratedFailuresPerExecution());
 			while (!rekeyBatch(rekeyService.getEntityType(), rekeyService, entityRekeyProgressTracker, rekeyCryptoShield, recordsSupplier)) {
-				if (!Duration.ZERO.equals(batchInterval)) {
+				if (!Duration.ZERO.equals(rekeySchedulerConfig.getBatchInterval())) {
 					try {
-						logger.log(DEBUG, "Waiting for {0} milliseconds before re-keying another batch of records for entity {1}", batchInterval, rekeyService.getEntityType().getName());
-						Thread.sleep(batchInterval.toMillis());
+						logger.log(DEBUG, "Waiting for {0} milliseconds before re-keying another batch of records for entity {1}", rekeySchedulerConfig.getBatchInterval(), rekeyService.getEntityType().getName());
+						Thread.sleep(rekeySchedulerConfig.getBatchInterval().toMillis());
 					} catch (InterruptedException e) {
 						logger.log(ERROR, String.format("An error occurred waiting to re-key the next batch of records for entity %s....cancelling this re-key task", rekeyService.getEntityType().getName()), e);
 						Thread.currentThread().interrupt();
@@ -670,7 +425,7 @@ public class RekeyScheduler {
 	private void removeKey(CryptoKey tenantsDeprecatedCryptoKey) {
 		try {
 			logger.log(INFO, "Notifying the application to mark the following Crypto key as deleted {1}", tenantsDeprecatedCryptoKey);
-			rekeyCryptoKeyManager.markKeyForDeletion(tenantsDeprecatedCryptoKey);
+			rekeySchedulerConfig.getRekeyCryptoKeyManager().markKeyForDeletion(tenantsDeprecatedCryptoKey);
 		} catch (Exception e) {
 			logger.log(ERROR, "An error occurred trying to mark the Crypto key for deletion {}", tenantsDeprecatedCryptoKey);
 		}
@@ -684,6 +439,6 @@ public class RekeyScheduler {
 	}
 
 	private Instant now() {
-		return clock.instant();
+		return rekeySchedulerConfig.getClock().instant();
 	}
 }

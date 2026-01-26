@@ -4,6 +4,7 @@ import ie.bitstep.mango.crypto.annotations.CascadeEncrypt;
 import ie.bitstep.mango.crypto.annotations.EnableMigrationSupport;
 import ie.bitstep.mango.crypto.annotations.Encrypt;
 import ie.bitstep.mango.crypto.annotations.EncryptedBlob;
+import ie.bitstep.mango.crypto.annotations.EncryptedData;
 import ie.bitstep.mango.crypto.annotations.EncryptionKeyId;
 import ie.bitstep.mango.crypto.annotations.Hmac;
 import ie.bitstep.mango.crypto.annotations.strategies.HmacStrategyToUse;
@@ -46,7 +47,7 @@ public class AnnotatedEntityManager {
 
 	/**
 	 * Applications must call this method for all entity classes they have which contain the encryption annotations
-	 * ({@link Encrypt @Encrypt} {@link Hmac @Hmac}, {@link EncryptedBlob @EncryptedBlob}). This method registers the
+	 * ({@link Encrypt @Encrypt} {@link Hmac @Hmac}, {@link EncryptedData @EncryptedData}). This method registers the
 	 * default {@link DoubleHmacFieldStrategy} HMAC strategy for the entity type.
 	 *
 	 * @param annotatedEntityClasses Application's entity class.
@@ -170,10 +171,14 @@ public class AnnotatedEntityManager {
 			return;
 		}
 
-		List<Field> encryptedDataField = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, EncryptedBlob.class);
+		List<Field> encryptedDataField = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, EncryptedData.class);
+		if (encryptedDataField.isEmpty()) {
+			// for backwards compatibility
+			encryptedDataField = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, EncryptedBlob.class);
+		}
 		if (encryptedDataField.size() != 1) {
-			throw new NonTransientCryptoException(String.format("%s has a field marked with @%s but without a corresponding field marked with @%s",
-					annotatedEntityClass.getSimpleName(), Encrypt.class.getSimpleName(), EncryptedBlob.class.getSimpleName()));
+			throw new NonTransientCryptoException(String.format("%s has a field marked with @%s but without a corresponding field marked with @%s/@%s",
+					annotatedEntityClass.getSimpleName(), Encrypt.class.getSimpleName(), EncryptedData.class.getSimpleName(), EncryptedBlob.class.getSimpleName()));
 		}
 
 		encryptedDataField.get(0).setAccessible(true); // NOSONAR
@@ -187,10 +192,10 @@ public class AnnotatedEntityManager {
 			EnableMigrationSupport migrationSupport = field.getAnnotation(EnableMigrationSupport.class);
 
 			if (migrationSupport != null) {
-// Field has @EnableMigrationSupport, skip transient check and log warning/error
+				// Field has @EnableMigrationSupport, skip transient check and log warning/error
 				handleMigrationSupport(annotatedEntityClass, field, migrationSupport);
 			} else if (!Modifier.isTransient(field.getModifiers())) {
-// Field doesn't have @EnableMigrationSupport and is not transient - throw exception
+				// Field doesn't have @EnableMigrationSupport and is not transient - throw exception
 				throw new NonTransientCryptoException(String.format("%s has a field named %s marked with @%s but it is not transient. " +
 								"Please mark any fields annotated with @%s as transient",
 						annotatedEntityClass.getSimpleName(), field.getName(), Encrypt.class.getSimpleName(), Encrypt.class.getSimpleName()));
@@ -222,10 +227,10 @@ public class AnnotatedEntityManager {
 				completionByStr, ticket);
 
 		if (today.isAfter(completionByDate)) {
-// After completion date - log ERROR
+			// After completion date - log ERROR
 			LOGGER.log(ERROR, message + " - MIGRATION DEADLINE HAS PASSED!");
 		} else {
-// Before completion date - log WARNING
+			// Before completion date - log WARNING
 			LOGGER.log(WARNING, message);
 		}
 	}

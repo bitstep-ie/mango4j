@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import ie.bitstep.mango.crypto.annotations.Encrypt;
-import ie.bitstep.mango.crypto.annotations.EncryptedBlob;
+import ie.bitstep.mango.crypto.annotations.EncryptedData;
 import ie.bitstep.mango.crypto.annotations.Hmac;
 import ie.bitstep.mango.crypto.core.domain.CiphertextContainer;
 import ie.bitstep.mango.crypto.core.domain.CryptoKey;
@@ -36,12 +36,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
 import static java.lang.String.valueOf;
+import static java.lang.System.Logger.Level.ERROR;
 
 /**
  * Applications that use Entities annotated with the mango4j-crypto annotations (
  * {@link Encrypt @Encrypt},
  * {@link Hmac @Hmac} and
- * {@link EncryptedBlob @EncryptedBlob}) can use the methods in this class to perform
+ * {@link EncryptedData @EncryptedData}) can use the methods in this class to perform
  * their cryptographic operations instead of calling {@link EncryptionService} directly.
  * Your annotated entities must first be registered by passing them to the
  * {@link AnnotatedEntityManager#AnnotatedEntityManager(Collection, HmacStrategyHelper)} on application startup
@@ -58,7 +59,7 @@ public class CryptoShield {
 	private final CryptoShieldDelegate cryptoShieldDelegate;
 	private final RetryConfiguration retryConfiguration;
 
-	public static final String A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S = "A %s error occurred trying to get the value of field: %s on type: %s";
+	private static final String A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S = "A %s error occurred trying to get the value of field: %s on type: %s";
 
 	public static class Builder {
 		private Collection<Class<?>> annotatedEntities;
@@ -122,7 +123,7 @@ public class CryptoShield {
 							.threadNamePrefix("crypto-retry-task")
 							.uncaughtExceptionHandler((t, e) ->
 									// log or handle uncaught exceptions
-									logger.log(System.Logger.Level.ERROR, "Uncaught in {0}: {1}", t.getName(), e)
+									logger.log(ERROR, "Uncaught in {0}: {1}", t.getName(), e)
 							)
 							.removeOnCancelPolicy(true)
 							.build();
@@ -146,7 +147,7 @@ public class CryptoShield {
 
 	/**
 	 * This method will encrypt/HMAC all (annotated) fields in your entity and set the corresponding
-	 * {@link EncryptedBlob EncryptedBlob} and HMAC fields
+	 * {@link EncryptedData EncryptedData} and HMAC fields
 	 * with the resulting values. The original (transient) fields marked with
 	 * {@link Encrypt Encrypt} and
 	 * {@link Hmac} will not be modified.
