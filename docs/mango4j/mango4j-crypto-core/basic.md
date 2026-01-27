@@ -32,8 +32,6 @@
     12. [Why don't HMACs have a reference to the HMAC key stored alongside them the same way encrypted ciphertext does?](#why-dont-hmacs-have-a-reference-to-the-hmac-key-stored-alongside-them-the-same-way-encrypted-ciphertext-does)
     13. [What is HMAC tokenization?](#what-is-hmac-tokenization)
 
-<a name="introduction"></a>
-
 # Introduction
 
 Mango4j-crypto is a framework which aims to simplify the implementation of Application Level Encryption (focussing on
