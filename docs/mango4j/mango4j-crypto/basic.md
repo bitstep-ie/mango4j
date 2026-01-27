@@ -1,4 +1,4 @@
-# Mango4j-crypto
+# Getting Started
 
 Mango4j-crypto is a framework which aims to simplify the implementation of Application Level Encryption (focussing on
 data at rest) in Java applications, and ensure that applications follow a flexible and powerful design that can handle
@@ -440,50 +440,6 @@ There are several things to note with this entity definition. Since this entity 
 
 That's it! And since the List Hmac Strategy has an experimental rekey functionality we'll document that next.
 
-### Steps to Rekey entities that use the List HMAC Strategy
-
-1. Implement the RekeyCryptoKeyManager interface.
-2. For each entity that uses this library create a corresponding implementation of the RekeyService interface.
-3. Configure a RekeyScheduler in your config class, like so:
-
-```java language=java
-
-@Bean
-public RekeyScheduler rekeyScheduler(CryptoShield cryptoShield,
-                                     List<RekeyService<?>> rekeyServices,
-                                     RekeyCryptoKeyManager rekeyCryptoKeyManager,
-                                     ObjectMapperFactory objectMapperFactory,
-                                     Clock clock) {
-	RekeySchedulerConfig rekeySchedulerConfig = RekeySchedulerConfig.builder()
-			// Mandatory configurations
-			.withCryptoShield(cryptoShield)
-			.withRekeyServices(rekeyServices)
-			.withRekeyCryptoKeyManager(rekeyCryptoKeyManager)
-			.withObjectMapper(objectMapperFactory.objectMapper())
-			.withClock(clock)
-			.withCryptoKeyCachePeriod(Duration.ofMinutes(60)) // IMPORTANT: Set to your key cache duration
-			.withRekeyCheckInterval(1, 24, TimeUnit.HOURS) // Check for re-key jobs once a day, starting after 1 hour
-
-			// Optional configurations
-			.withBatchInterval(Duration.ofSeconds(1)) // Pause 1 second between batches
-			.withMaximumToleratedFailuresPerExecution(50)
-			.build();
-	return new RekeyScheduler(rekeySchedulerConfig);
-}
-```
-
-The above is a once off config. Once done, it allows the application to perform rekey jobs with no extra code and
-without
-restarting the application. In order to make this periodic RekeyScheduler start rekeying entities you need to make use
-of
-the CryptoKey.rekeyMode field. Mango4j-crypto supports 2 types of rekey modes: KEY_OFF and KEY_ON. Please see the
-general documentation for an explanation of these values. Once the CryptoKey.rekeyMode field is set to either
-KEY_ON or KEY_OFF this RekeyScheduler will trigger the rekeying process the next time it runs (defined by
-`withRekeyCheckInterval()` as above).
-
-> NOTE: You can still use the RekeyScheduler to configure a rekey for any entity that only has @Encrypt fields (and
-> doesn't have HMACs). It's just that HMAC rekey is only supported for entities that use the List HMAC Strategy. 
-
 ## SingleHmacStrategy
 
 The first example entity at the beginning of this document uses the SingleHmacStrategy. To use this strategy you just
@@ -568,6 +524,55 @@ An application should only use this strategy for an entity if the answer to the 
 
 The reasoning behind these questions are related to the challenges with HMAC key rotation which are outlined extensively
 in this and the mango4j-crypto-core official documentation.
+
+
+### Steps to configure automatic rekey of entities 
+Mango4j-crypto has built in support for rekey jobs (currently in BETA). Encryption rekeying is supported for all entities but for HMACs the 
+RekeyScheduler only supports rekeying HMACs for entities which use the List HMAC Strategy.  
+
+
+1. Implement the RekeyCryptoKeyManager interface.
+2. For each entity that uses this library create a corresponding implementation of the RekeyService interface.
+3. Configure a RekeyScheduler in your config class, like so:
+
+```java language=java
+
+@Bean
+public RekeyScheduler rekeyScheduler(CryptoShield cryptoShield,
+                                     List<RekeyService<?>> rekeyServices,
+                                     RekeyCryptoKeyManager rekeyCryptoKeyManager,
+                                     ObjectMapperFactory objectMapperFactory,
+                                     Clock clock) {
+	RekeySchedulerConfig rekeySchedulerConfig = RekeySchedulerConfig.builder()
+			// Mandatory configurations
+			.withCryptoShield(cryptoShield)
+			.withRekeyServices(rekeyServices)
+			.withRekeyCryptoKeyManager(rekeyCryptoKeyManager)
+			.withObjectMapper(objectMapperFactory.objectMapper())
+			.withClock(clock)
+			.withCryptoKeyCachePeriod(Duration.ofMinutes(60)) // IMPORTANT: Set to your key cache duration
+			.withRekeyCheckInterval(1, 24, TimeUnit.HOURS) // Check for re-key jobs once a day, starting after 1 hour
+
+			// Optional configurations
+			.withBatchInterval(Duration.ofSeconds(1)) // Pause 1 second between batches
+			.withMaximumToleratedFailuresPerExecution(50)
+			.build();
+	return new RekeyScheduler(rekeySchedulerConfig);
+}
+```
+
+The above is a once off config. Once done, it allows the application to perform rekey jobs with no extra code and
+without
+restarting the application. In order to make this periodic RekeyScheduler start rekeying entities you need to make use
+of
+the CryptoKey.rekeyMode field. Mango4j-crypto supports 2 types of rekey modes: KEY_OFF and KEY_ON. Please see the
+general documentation for an explanation of these values. Once the CryptoKey.rekeyMode field is set to either
+KEY_ON or KEY_OFF this RekeyScheduler will trigger the rekeying process the next time it runs (defined by
+`withRekeyCheckInterval()` as above).
+
+> NOTE: You can still use the RekeyScheduler to configure a rekey for any entity that only has @Encrypt fields (and
+> doesn't have HMACs). It's just that HMAC rekey is only supported for entities that use the List HMAC Strategy. 
+
 
 # HMAC Tokenizers
 
