@@ -323,9 +323,9 @@ public class CryptoShield {
 
 		if (cryptoShieldDelegate.getCurrentEncryptionKey() == null) {
 			// TODO: The delegate check is needed due to the fact that currently the rekey job (currently in BETA) does the
-			//  re-encrypt and re-HMAC operations separately so cryptoShieldDelegate.getCurrentEncryptionKey() returns null
-			//  here for the re-HMAC job which isn't a problem and we just return immediately cause there's no encryption to do.
-			//  This all needs removed when the rekey stuff is refactored.
+			// re-encrypt and re-HMAC operations separately so cryptoShieldDelegate.getCurrentEncryptionKey() returns null
+			// here for the re-HMAC job which isn't a problem and we just return immediately cause there's no encryption to do.
+			// This all needs removed when the rekey stuff is refactored.
 			if (cryptoShieldDelegate != this.cryptoShieldDelegate) {
 				return;
 			} else {

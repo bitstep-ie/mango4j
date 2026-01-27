@@ -1,4 +1,20 @@
-# Getting Started
+# Table Of Contents
+
+1. [Introduction](#introduction)
+2. [Getting Started](#getting-started)
+3. [Encryption](#encryption)
+   1. [CryptoKey Provider](#crypto-key-provider)
+   2. [CryptoShield Setup](#crypto-shield-setup)
+4. [HMAC](#hmac)
+    1. [Single HMAC Strategy](#single-hmac-strategy)
+    2. [List HMAC Strategy](#list-hmac-strategy)
+       1. [Compound Unique Constraints with the List HMAC Strategy](#compound-unique-constraints-with-the-list-hmac-strategy)
+    3. [Single HMAC Strategy With Key Start Time](#single-hmac-strategy-with-key-start-time)
+    4. [Double HMAC Strategy](#double-hmac-strategy)
+5. [Key Rotation](#key-rotation)
+6. [Rekeying](#rekeying)
+
+# Introduction
 
 Mango4j-crypto is a framework which aims to simplify the implementation of Application Level Encryption (focussing on
 data at rest) in Java applications, and ensure that applications follow a flexible and powerful design that can handle
@@ -6,7 +22,7 @@ the many tricky scenarios that can occur when implementing the same. It's based 
 fields on your entity which the library will then generate the appropriate ciphertext for (encrypted text, HMACs or
 both)
 
-For a more detailed discussion about the mango4j-crypto initiative please read the official general documentation on to
+For a more detailed discussion about the mango4j-crypto initiative please read [the official general documentation](../mango4j-crypto-core/basic.md) on to
 gain a better insight into the subject.
 
 The following guide is specifically aimed at showing you how to use the mango4j-crypto library in your applications.
@@ -17,7 +33,7 @@ document).
 
 ## Annotations
 
-The 2 main annotations that developers will use will be the @Encrypt and @Hmac annotations
+The main annotations that developers will use are:
 
 ### @Encrypt
 
@@ -52,11 +68,6 @@ they will make more sense.
 > entity. The only exception to this is when also using the @EnabledMigrationSupport annotation during once off
 > migration onto the library for existing applications (this will be explained further in this document).
 
-<br>
-<br>
-
-## Other annotations that you need to know about are:
-
 ### @EncryptedData
 
 As discussed above, if you have any fields marked with @Encrypt then you must have a single field marked with
@@ -65,7 +76,7 @@ encrypted source fields.
 
 ### @EncryptionKeyId
 
-This is an optional annotation (for now) which you can place on a (String) field in your entity and the library will set
+This is an optional annotation which you can place on a (String) field in your entity and the library will set
 it to the ID of the crypto key that was used to perform the
 encryption. This is not necessary for decryption purposes (the CryptoKey.key ID is also stored inside the @EncryptedData
 anyway) but it is useful for more performant rekey query purposes so it's recommended to have this anyway
@@ -73,10 +84,254 @@ as it won't hurt and can be useful later.
 It's basically used to find the records which are (or aren't) using a certain encryption/HMAC key so that they can be
 rekeyed with the current encryption key.
 
+# Getting Started
 The following instructions detail how to use this library. We use Springboot for our examples but that's an arbitrary
-choice, you'll write your application however you want. mango4j-crypto has few dependencies.
-An example Entity is as follows (notice the @SingleHmacStrategy annotation on the class, this is only needed if we have
-HMAC fields which we do in this example entity):
+choice, you'll write your application however you want. mango4j-crypto has very few dependencies and doesn't know what 
+you do with your entities after encryption/decryption.
+An example entity is as follows:
+
+# Encryption
+
+```java language=java
+import ie.bitstep.mango.crypto.annotations.Encrypt;
+import ie.bitstep.mango.crypto.annotations.EncryptedData;
+import ie.bitstep.mango.crypto.annotations.Hmac;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+
+@Entity(name = "USER_PROFILE")
+public class UserProfileEntity {
+
+	@Encrypt
+	private transient String pan;
+
+	@Encrypt
+	private transient String userName;
+
+	@Encrypt
+	private transient String ethnicity;
+
+	public String getPan() {
+		return pan;
+	}
+
+	public void setPan(String pan) {
+		this.pan = pan;
+	}
+
+	public String getUserName() {
+		return userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getEthnicity() {
+		return ethnicity;
+	}
+
+	public void setEthnicity(String ethnicity) {
+		this.ethnicity = ethnicity;
+	}
+
+	@Id
+	@Column(name = "ID")
+	private String id;
+
+	@Column(name = "FAVOURITE_COLOR")
+	private String favouriteColor;
+
+	@Column(name = "ENCRYPTED_DATA")
+	@EncryptedData
+	private String encryptedData;
+
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
+	public String getFavouriteColor() {
+		return favouriteColor;
+	}
+
+	public void setFavouriteColor(String favouriteColor) {
+		this.favouriteColor = favouriteColor;
+	}
+
+}
+```
+
+> NOTES:
+> * Fields marked with @Encrypt will be bundled up into a JSON map, encrypted all at once with the remaining ciphertext
+    output set into the field marked with @EncryptedData (which is the only field that would then be persisted by the application)
+> * You'll notice that we didn't bother defining getters/setters for the ENCRYPTED_DATA field. 
+>   This keeps the entity clean from the perspective of the outside world. Code outside this class only has access to 
+>   the source fields which will contain the original values. There's usually not a need for outside code to see the actual encrypted values.
+> * Notice that the source fields are marked transient. This is a requirement and provides more safety to your application by 
+>   making sure that serialization frameworks (Jackson, Hibernate, etc.) discard these values during serialization. 
+>   The last thing you want is your ORM flushing confidential values in cleartext to the DB.
+> * The favouriteColour field isn't confidential so it's just a plain old field that we define normally, it gets its own 
+>   column in the DB, etc.
+
+
+
+# CryptoKey Provider
+
+Before we enable mango4j-crypto to encrypt/decrypt our UserProfile entity we need to create our implementation of the 
+[CryptoKeyProvider](../../../mango4j-crypto-core/src/main/java/ie/bitstep/mango/crypto/core/providers/CryptoKeyProvider.java) 
+interface for our application. If you store your CryptoKey objects in a database it might look something like this:
+
+```java language=java
+package ie.bitstep.mango.examples.crypto.example.common;
+
+import ie.bitstep.mango.crypto.core.domain.CryptoKey;
+import ie.bitstep.mango.crypto.core.domain.CryptoKeyUsage;
+import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
+import ie.bitstep.mango.crypto.example.domain.entities.CryptoKeyEntity;
+import ie.bitstep.mango.examples.crypto.example.repositories.CryptoKeyRepository;
+import ie.bitstep.mango.examples.crypto.example.utils.CryptoKeyUtils;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Component
+public class ApplicationCryptoKeyProvider implements CryptoKeyProvider {
+
+	private final CryptoKeyRepository cryptoKeyRepository;
+	private final CryptoKeyUtils cryptoKeyUtils;
+
+	public ApplicationCryptoKeyProvider(CryptoKeyRepository cryptoKeyRepository, CryptoKeyUtils cryptoKeyUtils) {
+		this.cryptoKeyRepository = cryptoKeyRepository;
+		this.cryptoKeyUtils = cryptoKeyUtils;
+	}
+
+	@Override
+	public CryptoKey getById(String id) {
+		CryptoKeyEntity cryptoKeyEntity = cryptoKeyRepository.findById(id).orElseThrow(RuntimeException::new);
+		return cryptoKeyUtils.convert(cryptoKeyEntity);
+	}
+
+	@Override
+	public CryptoKey getCurrentEncryptionKey() {
+		return cryptoKeyUtils.convert(cryptoKeyRepository.findTopByUsageOrderByCreatedDateDesc(CryptoKeyUsage.ENCRYPTION));
+	}
+
+	@Override
+	public List<CryptoKey> getCurrentHmacKeys() {
+		return cryptoKeyRepository.findAllByUsage(CryptoKeyUsage.HMAC).stream()
+		        .filter(cryptoKeyEntity -> cryptoKeyEntity.getStatus() != DELETED)
+		        .map(cryptoKeyUtils::convert)
+		        .collect(Collectors.toList());
+	}
+
+	@Override
+	public List<CryptoKey> getAllCryptoKeys() {
+		return cryptoKeyRepository.findAll().stream()
+				.filter(cryptoKeyEntity -> cryptoKeyEntity.getStatus() != DELETED)
+				.map(cryptoKeyUtils::convert)
+				.collect(Collectors.toList());
+	}
+
+}
+```
+
+> **NOTES**:
+> * The getCurrentKey() method should return the currently active encryption key for your tenant/application. 
+>   It is called for the CryptoShield.encrypt() method to get the key it should use for the encryption (if applicable).
+> * The getCurrentHmacKeys() should return all HMAC keys which are currently in use in order of createdDate descending
+>   (so the latest HMAC key would be the 1st in the list if there are multiple). This is called by CryptoShield.encrypt() 
+>   and CryptoShield.generateHmacs() to get the key(s) it should use to calculate HMACs (if applicable).
+> * This example uses the concept of statuses on the keys to keep track of which ones have been deleted. 
+>   This allows us to keep the key for certain length of time after a rekey (and subsequent key deletion) and then 
+>   manually clean them up when we're 100% sure we don't need them. Copying this approach is up to you.
+> * The getById() method should return the CryptoKey regardless of its status. This method is called for the 
+>   CryptoShield.decrypt() method to get the key needed to decrypt the entity.
+> * Make sure the createdDate fields on your CryptoKeys are correctly populated.
+> * Most CryptoKeys fields are read-only. The only fields that you should ever update are CryptoKey.lastModifiedDate and 
+>   CryptoKey.rekeyMode. Don't update the other fields!
+
+# CryptoShield Setup
+* Finally we just need to create an instance (bean) for CryptoShield in your application config, passing in a list of all your application
+  entities which use @Encrypt or @Hmac, like the following:
+
+```java language=java
+
+@Bean
+public CryptoShield cryptoShield(CryptoKeyProvider cryptoKeyProvider) {
+	return new CryptoShield.Builder()
+			.withCryptoKeyProvider(cryptoKeyProvider)
+			.withAnnotatedEntities(List.of(UserProfileEntity.class))
+			.withEncryptionServiceDelegates(List.of(new Base64EncryptionService(), new IdentityEncryptionService()))
+			.withObjectMapperFactory(new ConfigurableObjectMapperFactory())
+			.build();
+}
+```
+
+> **NOTES:** 
+> * In this example we're passing in instances of Base64EncryptionService and IdentityEncryptionService to make
+> them available to the library. These come with the library for test purposes and should never be available in a production deployment.
+> To minimise this risk it's advised to have separate config classes which run with 'prod' and 'dev'
+> profiles. You can create your own EncryptionService classes by creating your own subclass of EncryptionServiceDelegate
+> (just like Base64EncryptionService and IdentityEncryptionService do) which
+> carries out encryption operations using a cryptographic provider that you use in whatever way you need.
+> * We register our UserProfile entity (and any others) with the library using the withAnnotationEntities() method.
+> * ConfigurableObjectMapperFactory is a default implementation of
+>   [ObjectMapperFactory](../../../mango4j-crypto-core/src/main/java/ie/bitstep/mango/crypto/core/factories/ObjectMapperFactory.java) 
+>   that comes with the library to provide a Jackson ObjectMapper that it can use for formatting and parsing of the ciphertext. 
+>   You can supply your own ObjectMapper implementation instead if needed.
+
+Then your application code can encrypt your entities by calling:
+
+```java language=java
+        cryptoShield.encrypt(userProfile);
+```
+And this will encrypt all the confidential fields in your entity and set the resulting ciphertext into the field marked 
+with @EncryptedData. 
+> **NOTE:** This encrypt operation doesn't affect the original values of the transient fields, they remain exactly as they 
+> were (unencrypted). So you can continue working with them in your code after calling CryptoShield.encrypt(). 
+
+<br>
+Likewise, to decrypt an entity you can call:
+
+```java language=java
+        cryptoShield.decrypt(userProfile);
+```
+
+And this will reset all the confidential (transient) fields in your entity back to their original values.
+
+# HMAC Strategies
+
+A core concept in the mango4j-crypto library is that of HMAC strategies. There are various ways that an application
+could choose to implement key-rotation friendly HMAC functionality (please read the 
+[general documentation](../mango4j-crypto-core/basic.md#hmac-key-rotation-challenges) for a detailed
+explanation of this material) and this library provides 4 [HMAC Strategies](../mango4j-crypto-core/basic.md#hmac-strategies) out of the box.
+
+You can choose which ones to apply to your application entities by using the corresponding class level annotation. The
+library authors strongly advise application developers to use
+the @ListHmacStrategy unless there are very strong reasons not to. Currently, the library supports the following (in
+order of preference of the mango4j-crypto team):
+<br>
+@ListHmacStrategy
+<br>
+@SingleHmacStrategyForTimeBaseCryptoKey
+<br>
+@SingleHmacStrategy
+<br>
+@DoubleHmacStrategy
+<br>
+
+But we'll start with the Single HMAC Strategy as that's the easiest to understand. In this example we also need to 
+generate HMACs for both the pan and username fields as they both need to be searchable and username needs to be unique 
+in our application.
+
+## Single HMAC Strategy
 
 ```java language=java
 import ie.bitstep.mango.crypto.annotations.Encrypt;
@@ -162,144 +417,23 @@ public class UserProfileEntity {
 }
 ```
 
-> NOTE:
-> * Fields marked with @Encrypt will be bundled up into a JSON map, encrypted all at once with the remaining ciphertext
-    output set into the field marked with @EncryptedData (which is the only field that would then be persisted)
-> * Since we're using the @SingleHmacStrategy, each field marked with @Hmac will have a HMAC calculated using the
-    current
-    > HMAC key and the resulting HMAC ciphertext will be set into the field with the same name as the original @Hmac
-    field with the
-    > suffix 'Hmac'. For example, for the entity above the library will grab the value from the 'pan' field, and set the
-    value of the 'panHmac'
-    > field to its calculated HMAC value (which would then be persisted to the DB). This is the convention when using
-    the @SingleHmacStrategy
-
-
-To make this work, all you have to do is follow these instructions:
-
-* Create your implementation of the CryptoKeyProvider interface. If you store your CryptoKey objects in a database it
-  might look something like this:
-
-```java language=java
-package ie.bitstep.mango.examples.crypto.example.common;
-
-import ie.bitstep.mango.crypto.core.domain.CryptoKey;
-import ie.bitstep.mango.crypto.core.domain.CryptoKeyUsage;
-import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
-import ie.bitstep.mango.crypto.example.domain.entities.CryptoKeyEntity;
-import ie.bitstep.mango.examples.crypto.example.repositories.CryptoKeyRepository;
-import ie.bitstep.mango.examples.crypto.example.utils.CryptoKeyUtils;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
-@Component
-public class ApplicationCryptoKeyProvider implements CryptoKeyProvider {
-
-	private final CryptoKeyRepository cryptoKeyRepository;
-	private final CryptoKeyUtils cryptoKeyUtils;
-
-	public ApplicationCryptoKeyProvider(CryptoKeyRepository cryptoKeyRepository, CryptoKeyUtils cryptoKeyUtils) {
-		this.cryptoKeyRepository = cryptoKeyRepository;
-		this.cryptoKeyUtils = cryptoKeyUtils;
-	}
-
-	@Override
-	public CryptoKey getById(String id) {
-		CryptoKeyEntity cryptoKeyEntity = cryptoKeyRepository.findById(id).orElseThrow(RuntimeException::new);
-		return cryptoKeyUtils.convert(cryptoKeyEntity);
-	}
-
-	@Override
-	public CryptoKey getCurrentEncryptionKey() {
-		return cryptoKeyUtils.convert(cryptoKeyRepository.findTopByUsageOrderByCreatedDateDesc(CryptoKeyUsage.ENCRYPTION));
-	}
-
-	@Override
-	public List<CryptoKey> getCurrentHmacKeys() {
-		return cryptoKeyRepository.findAllByUsage(CryptoKeyUsage.HMAC).stream()
-				.map(cryptoKeyUtils::convert)
-				.collect(Collectors.toList());
-	}
-
-	@Override
-	public List<CryptoKey> getAllCryptoKeys() {
-		return cryptoKeyRepository.findAll().stream()
-				.map(cryptoKeyUtils::convert)
-				.collect(Collectors.toList());
-	}
-
-}
-```
-
-* Create an instance (bean) for your CryptoKeyProvider (like the one above) in your application config.
-* Create an instance (bean) for CryptoShield in your application config, passing in a list of all your application
-  entities which use @Encrypt or @Hmac, like the following:
-
-```java language=java
-
-@Bean
-public CryptoShield cryptoShield(CryptoKeyProvider cryptoKeyProvider) {
-	return new CryptoShield.Builder()
-			.withCryptoKeyProvider(cryptoKeyProvider)
-			.withAnnotatedEntities(List.of(UserProfileEntity.class))
-			.withEncryptionServiceDelegates(List.of(new Base64EncryptionService(), new IdentityEncryptionService()))
-			.withObjectMapperFactory(new ConfigurableObjectMapperFactory())
-			.build();
-}
-```
-
-> **NOTE:** In this example we're passing in instances of Base64EncryptionService and IdentityEncryptionService to make
-> them available to the library.
-> These come with the library for test purposes and should never be available in a production deployment.
-> To minimise this risk it's advised to have separate config classes which run with 'prod' and 'dev'
-> profiles. You can create your own EncryptionService classes by creating your own subclass of EncryptionServiceDelegate
-> (just like Base64EncryptionService and IdentityEncryptionService do) which
-> carries out encryption operations using a cryptographic provider that you use in whatever way you need.
-
-Then in your application code which performs write operations you should call
-
-```java language=java
-        CryptoShield.encrypt(userProfile);
-```
-
-before storing, so that the library encrypts/HMACs all of your annotated entity fields.
+> **NOTES**:
+> * We've added the @SingleHmacStrategy annotation to the class.
+> * We've added 2 new fields 'panHmac' and 'userNameHmac' to the entity. This is because HMACs need to be stored separately, 
+>   and the convention the SingleHmacStrategy uses is that the hmac fields must be named the same as the source fields 
+>   with the suffix 'Hmac'. So the 'pan' field gets its HMAC calculated and set into the 'panHmac' field and same for userName.
+> * Again, you'll notice that we didn't bother defining getters/setters for the USERNAME_HMAC, PAN_HMAC fields either, 
+>   for the same reason that we didn't bother defining getters/setters for the ENCRYPTED_DATA field.
+> * The panHmac and userNameHmac fields are persisted to the DB in our example and each have their own columns (we're using Hibernate here). 
+>   The USERNAME_HMAC also has a unique constraint on it.
 
 <br>
-Likewise, after retrieving an entity from storage you can call:
 
-```java language=java
-        CryptoShield.decrypt(userProfile);
-```
-
-to reset (decrypt) all the original values in your entity. That's pretty much all there is to it.
-
-# HMAC Strategies
-
-A core concept in the mango4j-crypto library is that of HMAC strategies. There are various ways that an application
-could choose to implement key-rotation friendly HMAC functionality (please read the general documentation for a detailed
-explanation of this material) and this library provides 4 of them out of the box.
-
-You can choose which ones to apply to your application entities by using the corresponding class level annotation. The
-library authors strongly advise application developers to use
-the @ListHmacStrategy unless there are very strong reasons not to. Currently, the library supports the following (in
-order of preference of the mango4j-crypto team):
-<br>
-@ListHmacStrategy
-<br>
-@SingleHmacStrategyForTimeBaseCryptoKey
-<br>
-@SingleHmacStrategy
-<br>
-@DoubleHmacStrategy
-<br>
-
-## ListHmacFieldStrategy usage
+## ListHmacFieldStrategy
 
 ```java language=java
 import ie.bitstep.mango.crypto.annotations.Encrypt;
-import ie.bitstep.mango.crypto.annotations.EncryptedBlob;
+import ie.bitstep.mango.crypto.annotations.EncryptedData;
 import ie.bitstep.mango.crypto.annotations.EncryptionKeyId;
 import ie.bitstep.mango.crypto.annotations.Hmac;
 import ie.bitstep.mango.crypto.annotations.strategies.ListHmacStrategy;
@@ -365,7 +499,7 @@ public class UserProfileEntityForListHmacStrategy implements Lookup, Unique {
 
 	private String favouriteColor;
 
-	@EncryptedBlob
+	@EncryptedData
 	private String encryptedData;
 
 	@EncryptionKeyId
@@ -409,25 +543,28 @@ public class UserProfileEntityForListHmacStrategy implements Lookup, Unique {
 
 }
 ```
+<br>
 
-The above example entity is designed for MongoDB (as it's the most suitable DB for this HMAC strategy). If you are using
-it with an SQL DB check out the [mango4j-crypto-example](TBD) demo application which does the exact same for an SQL DB.
+> * The above example entity is designed for MongoDB (as it's the most suitable DB for this HMAC strategy). If you are using
+it with an SQL DB check out the mango4j-crypto-example demo application which does the exact same for an SQL DB.
 
-There are several things to note with this entity definition. Since this entity is annotated with @ListHmacStrategy:
-
-* The username field annotation with @Hmac has a 'purposes' definition. This can have the values of Purposes.LOOKUP or
-  Purposes.UNIQUE, or both depending on what purpose that field
-  is being HMACed for. If no value is specified then it defaults to Purposes.LOOKUP (as you can see with the 'pan'
-  field).
-* The entity class must implement either the Lookup interface, the Unique interface or both. Since this entity uses
-  HMACs for both purposes it implements both interfaces.
-* Unlike the other HMAC strategies this one doesn't have associated target HMAC fields with the 'Hmac' suffix. Instead,
-  it implements the methods getLookups() and setLookups() from
-  the Lookup interface and the getUniqueValues() and setUniqueValues() from the Unique interface. The library calls back
-  to these methods to get and set the HMACs. This is what
-  makes this the most powerful HMAC strategy, we can have as many HMACS for as many keys or tokenized values as needed.
-* If you are using HMACs for unique purposes, make sure to create the appropriate unique constraint definitions on your
-  DB. Generally you would place a compound unique constraint on the tenantID,alias and value columns.
+> **NOTES:**
+> * Similar to the SingleHmacStrategy sample entity, the userName field is annotated with @Hmac but here it also has a 
+>   'purposes' definition. This can have the values of Purposes.LOOKUP, Purposes.UNIQUE, or both depending on what purpose that field 
+>   is being HMACed for. If no value is specified then it defaults to Purposes.LOOKUP.
+> * The pan field also has the @Hmac annotation but no purposes definition so it defaults to Purposes.LOOKUP
+> * Entities which use @ListHmacStrategy must implement either the Lookup interface, the Unique interface or both. Since this entity uses
+    HMACs for both purposes it implements both interfaces. Having to implement these interfaces makes the List HMAC Strategy quite 
+>   different from other HMAC designs and that is shown in your entity definition. But it's also what makes it the most powerful strategy.
+> * Unlike the other HMAC strategies this one doesn't have associated target HMAC fields with the 'Hmac' suffix. Instead,
+    it implements the methods getLookups() and setLookups() from
+    the Lookup interface and the getUniqueValues() and setUniqueValues() from the Unique interface. The library calls back
+    to these methods to get and set the HMACs. This is what
+    makes this the most powerful HMAC strategy, we can have as many HMACS for as many keys or tokenized values as needed.
+> * If you are using HMACs for unique purposes, make sure to create the appropriate unique constraint definitions on your
+    DB. Generally you would place a compound unique constraint on the columns representing CryptoShieldHmacHolder.alias 
+    and CryptoShieldHmacHolder.value (and tenant ID if applicable). See [appendix A](#appendix-a) for a discussion on also potentially 
+>   including the CryptoShieldHmacHolder.cryptoKeyId in the compound constraint and when you might want to do this.
 
 > **Note:** When calling CryptoShield.encrypt() for entities which have been updated (as opposed to newly created),
 > make sure that the setLookup() and setUniqueValues() methods _completely replace_ the existing lists! Do not append to
@@ -436,25 +573,18 @@ There are several things to note with this entity definition. Since this entity 
 ### Steps to perform a HMAC key rotation when using the 'ListFieldHmacStrategy' HMAC strategy.
 
 1. Add the new HMAC key into the applications/tenant's list of HMAC keys. Do not remove or replace existing HMAC
-   cryptokeys as they must still be used!!! This means that your CryptoKeyProvider.getCurrentHmacKeys() should
+   cryptokeys as they must still be used!!! This means that your CryptoKeyProvider.getCurrentHmacKeys() should return 
+   all HMAC keys which have not been deleted yet. 
 
-That's it! And since the List Hmac Strategy has an experimental rekey functionality we'll document that next.
+That's it! And to support rekey functionality you can read the [rekey](#steps-to-configure-automatic-rekey-of-entities-) section.
 
-## SingleHmacStrategy
-
-The first example entity at the beginning of this document uses the SingleHmacStrategy. To use this strategy you just
-need to each field annotated with @Hmac to also have a
-corresponding field with the same name but with the suffix 'Hmac'. This is where the library will place the generated
-HMAC. Using the SingleHmacStrategy will leave applications
-open to the 2 core HMAC challenges so should only be used if your application can tolerate the resulting outcomes of
-those challenges. As such we don't really recommend anybody
-uses this strategy.
 
 ## SingleHmacStrategyForTimeBasedCryptoKey
 
-Exactly the same as the SingleHmacStrategy but will not use the current HMAC key for write operations until the
-CryptoKey.startTime (which you need to make sure to set on the new
-CryptoKey) has passed.
+The entity definition is the same as the @SingleHmacStrategy entity except with the @SingleHmacStrategyForTimeBasedCryptoKey 
+annotation on the class instead.
+This strategy almost works the same way as the SingleHmacStrategy, except that it will not use the current HMAC key for 
+write operations until the CryptoKey.startTime has passed (make sure to set this field on your corresponding CryptoKeys) .
 
 ## DoubleHmacFieldStrategy
 
@@ -528,10 +658,10 @@ in this and the mango4j-crypto-core official documentation.
 
 ### Steps to configure automatic rekey of entities 
 Mango4j-crypto has built in support for rekey jobs (currently in BETA). Encryption rekeying is supported for all entities but for HMACs the 
-RekeyScheduler only supports rekeying HMACs for entities which use the List HMAC Strategy.  
+RekeyScheduler only supports rekeying HMACs for entities which use the List HMAC Strategy. The configuration is as follows:
 
 
-1. Implement the RekeyCryptoKeyManager interface.
+1. Implement the RekeyCryptoKeyManager interface and configure an instance of it.
 2. For each entity that uses this library create a corresponding implementation of the RekeyService interface.
 3. Configure a RekeyScheduler in your config class, like so:
 

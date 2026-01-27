@@ -81,8 +81,8 @@ public class RekeyScheduler {
 				.toList();
 
 		// TODO: Currently we re-encrypt and re-HMAC separately which isn't very performant. Once this automated rekey code is
-		//  settled and out of beta we need to come back and make that these are done together, especially for entities that have both
-		//  encrypted data and HMACs
+		// settled and out of beta we need to come back and make that these are done together, especially for entities that have both
+		// encrypted data and HMACs
 		try {
 			reEncrypt(tenantId, tenantAllCryptoKeysSortedByDateDescending);
 		} catch (Exception e) {

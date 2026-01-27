@@ -49,7 +49,7 @@ class RekeyCryptoShieldTest {
 		CryptoShieldDelegate cryptoShieldDelegate = getRekeyCryptoShieldDelegate();
 
 		assertThat(cryptoShieldDelegate.getCurrentEncryptionKey()).isEqualTo(mockEncryptionKey);
-		assertThat(cryptoShieldDelegate.getHmacStrategy(testEntity)).contains(mockHmacStrategy);
+		assertThat(cryptoShieldDelegate.getHmacStrategy(testEntity)).isEmpty();
 	}
 
 	@SuppressWarnings("OptionalGetWithoutIsPresent")

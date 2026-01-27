@@ -5,7 +5,6 @@ import ie.bitstep.mango.crypto.hmac.HmacStrategy;
 import ie.bitstep.mango.crypto.hmac.ListHmacFieldStrategy;
 import ie.bitstep.mango.crypto.hmac.RekeyListHmacFieldStrategy;
 
-import java.util.List;
 import java.util.Optional;
 
 public class RekeyCryptoShield {

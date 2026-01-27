@@ -12,7 +12,7 @@
 6. [HMAC Key Rotation Challenges](#hmac-key-rotation-challenges)
     1. [Searching operations during the rotation of a HMAC key](#searching-operations-after-the-rotation-of-a-hmac-key)
     2. [Unique constraint enforcement](#unique-constraint-enforcement-after-the-rotation-of-a-hmac-key)
-7. [HMAC Strategies]()
+7. [HMAC Strategies](#hmac-strategies)
     1. [List HMAC Strategy](#list-hmac-strategy)
         1. [Process for re-keying data with the List HMAC Strategy](#process-for-re-keying-data-with-the-list-hmac-strategy)
     2. [Double HMAC Strategy](#double-hmac-strategy)
@@ -442,6 +442,12 @@ there would still exist a race condition in your code which can result in 2 user
 To remedy this you need to implement particular approaches to calculating and storing the HMACs for your entity fields.
 The following sections detail some of these approaches, all of which are supported in
 the [mango4j-crypto](mango4j-crypto/basic.md) library.
+
+
+# HMAC Strategies
+There are several designs you can choose to work with HMACs in your code depending on your application's ability to 
+tolerate or circumvent the challenges documented above (if they apply). So this section will discuss the ones supported 
+by Mango4j-crypto in the following section.
 
 ## List HMAC strategy
 
