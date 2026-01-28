@@ -34,11 +34,24 @@ public class WrappedKeyEncryptionService extends EncryptionServiceDelegate {
 	private final CryptoKeyProvider cryptoKeyProvider;
 	private final CiphertextFormatter ciphertextFormatter;
 
+	/**
+	 * Creates a wrapped key encryption service.
+	 *
+	 * @param cryptoKeyProvider the key provider
+	 * @param ciphertextFormatter the ciphertext formatter
+	 */
 	public WrappedKeyEncryptionService(CryptoKeyProvider cryptoKeyProvider, CiphertextFormatter ciphertextFormatter) {
 		this.cryptoKeyProvider = cryptoKeyProvider;
 		this.ciphertextFormatter = ciphertextFormatter;
 	}
 
+	/**
+	 * Encrypts payload using a wrapped data encryption key.
+	 *
+	 * @param cryptoKey the crypto key
+	 * @param payload the plaintext payload
+	 * @return the ciphertext container
+	 */
 	@Override
 	public CiphertextContainer encrypt(final CryptoKey cryptoKey, final String payload) {
 		try {
@@ -71,10 +84,22 @@ public class WrappedKeyEncryptionService extends EncryptionServiceDelegate {
 		}
 	}
 
+	/**
+	 * Returns the wrapping key for a key ID.
+	 *
+	 * @param cryptoKeyId the wrapping key ID
+	 * @return the crypto key
+	 */
 	private CryptoKey getWrappingKey(String cryptoKeyId) {
 		return cryptoKeyProvider.getById(cryptoKeyId);
 	}
 
+	/**
+	 * Decrypts ciphertext using a wrapped data encryption key.
+	 *
+	 * @param ciphertextContainer the ciphertext container
+	 * @return the decrypted plaintext
+	 */
 	@Override
 	public String decrypt(final CiphertextContainer ciphertextContainer) {
 		try {
@@ -97,17 +122,34 @@ public class WrappedKeyEncryptionService extends EncryptionServiceDelegate {
 		}
 	}
 
+	/**
+	 * HMAC is not supported by this implementation.
+	 *
+	 * @param list the HMAC holders
+	 */
 	@Override
 	public void hmac(final Collection<HmacHolder> list) {
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * Returns the supported crypto key type.
+	 *
+	 * @return the key type name
+	 */
 	@Override
 	public String supportedCryptoKeyType() {
 		return WrappedCryptoKeyTypes.WRAPPED.getName();
 	}
 
 
+	/**
+	 * Generates a random data encryption key.
+	 *
+	 * @param keySize the key size in bits
+	 * @param cipherConfig the cipher configuration
+	 * @return the secret key
+	 */
 	static SecretKey generateDataEncryptionKey(final int keySize, final CipherConfig cipherConfig) {
 		return new SecretKeySpec(Generators.generateRandomBits(keySize), cipherConfig.algorithm().getAlgorithm());
 	}

@@ -1,84 +1,82 @@
-## mango4j-collections
-> Bitstep's common collections
+# mango4j-collections
 
-Mango Collections provide useful algorithms and data structures library for Java applications.
+[Back to root README](../readme.md)
 
-* 
-    **FluentHashMap** allows the creation of tree-structured style Maps.\
-        Use as an alternative to parsing JSON into Maps.
-        
-    Instead of this 
-        
-    ~~~ java
-    ObjectMapper om = ObjectMapper();
-    String jsonString = "{\n" +
-                            "  \"pg\":\n" +
-                            "    {\n" +
-                            "      \"credentials\": {\n" +
-                            "        \"userid\": \"hello2\"\n" +
-                            "      }\n" +
-                            "    },\n" +
-                            "  \"redis\":\n" +
-                            "    {\n" +
-                            "      \"credentials\": {\n" +
-                            "        \"userid\": \"hello3\"\n" +
-                            "      }\n" +
-                            "    }\n" +
-                            "}\n"; 
-    Map m = om.readValue(jsonString, Map.class);
-    ~~~
-        
-    Try this
-        
-    ~~~ java
-    Map m = MapBuilder.<String, Object>map(new TreeMap()) // create top level map as TreeMap
-        .with("pg",
-            MapBuilder.<String, String>map()
-                .with("credentials",
-                    MapBuilder.<String, String>map()
-                        .with("userid", "hello2")
-                        .build()
-                )
-                .build()
-        )
-        .with("redis",
-            MapBuilder.<String, String>map()
-                .with("credentials",
-                    MapBuilder.<String, String>map()
-                        .with("userid", "hello3")
-                        .builder()
-                )
-                .build()
-        )
-        .build();
-    ~~~
+Bitstep collection helpers for fluent construction, map operations, reconciliation, and caching.
 
-*
-    **ListBuilder**
-    User instead of Arrays.asList(), returns a mutable ArrayList<> by default, also take an instance to modify
-    
-    ~~~ java
-        List<String> list = ListBuilder.<String>list(new LinkedList()).add("Hello").add("Dolly").build();
+## Architecture
+- Builders: `MapBuilder` and `ListBuilder` create collections fluently and let you supply concrete implementations.
+- Map utilities: `MapUtils` and `MapUtilsInternal` merge, replace, copy, and create nested paths.
+- Reconciliation: `CollectionReconciler` reconciles a current collection with a desired collection by key.
+- Caching: `ConcurrentCache` provides TTL-based caching with a "current" entry and scheduled eviction.
 
-		assertTrue(list instanceof LinkedList); // NOSONAR
-		assertEquals(2, list.size());
-    ~~~
-    
-    ~~~ java
-        // Overloaded add() takes array, and Collection<> types
-		String[] a = {"The", "cow", "jumped", "over", "the", "moon"};
-        List<String> list = ListBuilder.<String>list().add(a).build();
+## Functionality
+- Build nested maps and lists without verbose initialization.
+- Merge, replace, and copy maps with left-to-right semantics.
+- Create or navigate nested map paths safely.
+- Reconcile collections while preserving desired order.
+- Cache values with TTL, grace periods, and automatic `AutoCloseable` cleanup.
 
-		assertTrue(list instanceof LinkedList); // NOSONAR
-		assertEquals(6, list.size());
-    ~~~
-    
-*
-    **MapUtils**
-Map<k, List<V>> elementsToList(Map<K, V> m);
-e.g. Transform from Map<K, V> to Map<K, List<V\>>
+## Usage
+### Maven
+```xml
+<dependency>
+    <groupId>ie.bitstep.mango</groupId>
+    <artifactId>mango4j-collections</artifactId>
+    <version>VERSION</version>
+</dependency>
+```
 
-    ~~~ java
-		Map<String, String> input = MapBuilder.<String, String>map().with("name", "java").build();
-		Map<String, List<String>> output = MapUtils.<String, String>map().elementsToList(input);
-    ~~~
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-collections:VERSION")
+```
+
+## Examples
+### Fluent map construction
+```java
+MapBuilder<String, Object> builder = MapBuilder.map();
+builder.with("service", "payments");
+builder.withPath("config", "db")
+    .with("host", "localhost")
+    .with("port", 5432);
+
+Map<String, Object> map = builder.build();
+```
+
+### ListBuilder with a concrete type
+```java
+List<String> names = ListBuilder.<String>list(new LinkedList<>())
+    .add("Ada")
+    .add("Linus")
+    .build();
+```
+
+### Reconcile collections by key
+```java
+List<User> current = new ArrayList<>(List.of(new User("u1"), new User("u2")));
+List<User> desired = List.of(new User("u2"), new User("u3"));
+
+CollectionReconciler.reconcile(
+    current,
+    desired,
+    User::id
+);
+// current now contains u2 (existing instance) and u3 (new), in desired order.
+```
+
+### ConcurrentCache with TTL
+```java
+ScheduledExecutorService cleaner = Executors.newSingleThreadScheduledExecutor();
+ConcurrentCache<String, String> cache = new ConcurrentCache<>(
+    Duration.ofMinutes(10),
+    Duration.ofMinutes(10),
+    Duration.ofSeconds(5),
+    Duration.ofMinutes(1),
+    cleaner,
+    Clock.systemUTC()
+);
+
+cache.put("token", "abc123");
+String value = cache.get("token");
+```

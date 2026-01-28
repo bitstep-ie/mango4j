@@ -51,6 +51,9 @@ public class URLGenerator {
 	private List<String> pathComponents = new ArrayList<>();
 	private HashMap<String, List<QueryParam>> parameterMap = new LinkedHashMap<>();
 
+	/**
+	 * Creates an empty URL generator.
+	 */
 	private URLGenerator() {
 		// SONAR compliance
 	}
@@ -205,6 +208,11 @@ public class URLGenerator {
 		return this;
 	}
 
+	/**
+	 * Creates a new list for query parameters.
+	 *
+	 * @return a new list instance
+	 */
 	private List<QueryParam> newQueryParam() {
 		return new ArrayList<>();
 	}
@@ -231,9 +239,9 @@ public class URLGenerator {
 	}
 
 	/**
-	 * Initialise the query from a URI
+	 * Initializes the query parameters from a URI.
 	 *
-	 * @param uri The URI
+	 * @param uri the URI to parse
 	 */
 	private void initialiseQuery(URI uri) {
 		String query = uri.getQuery();
@@ -251,9 +259,9 @@ public class URLGenerator {
 	}
 
 	/**
-	 * Initialise the path from a URI
+	 * Initializes the path from a URI.
 	 *
-	 * @param uri The URI
+	 * @param uri the URI to parse
 	 */
 	private void initialisePath(URI uri) {
 		path(uri.getPath());

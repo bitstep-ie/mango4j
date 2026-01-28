@@ -16,9 +16,24 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Pattern(regexp = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$") // NOSONAR
 @ReportAsSingleViolation
 public @interface Type4UUID {
+	/**
+	 * Defines the default validation message.
+	 *
+	 * @return the message template
+	 */
 	String message() default "Lowercase type 4 like UUID required";
 
+	/**
+	 * Defines the validation groups.
+	 *
+	 * @return the groups
+	 */
 	Class<?>[] groups() default {};
 
+	/**
+	 * Defines the payload for clients of the Bean Validation API.
+	 *
+	 * @return the payload
+	 */
 	Class<? extends Payload>[] payload() default {};
 }

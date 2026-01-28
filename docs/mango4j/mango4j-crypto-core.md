@@ -1,25 +1,28 @@
 # mango4j-crypto-core
 
 ## Overview
+Core crypto abstractions shared by mango4j crypto modules.
 
-Mango4j crypto core
+## Architecture
+- Domain objects: `CryptoKey`, `CryptoKeyUsage`, `CiphertextContainer`, `HmacHolder`.
+- Orchestration: `EncryptionService` routes operations to delegates by key type.
+- Formatting: `CiphertextFormatter` serializes and parses stored ciphertext.
+- Providers: `CryptoKeyProvider` supplies active keys.
 
-## How to use?
-
-### Add the dependency
-
-To make use of the library, import the dependency into your project:
-
-```text language=text;title=Gradle Dependency;collapse=false;linenumbers=true;firstline=1
-implementation("ie.bitstep.mango:mango4j-cryto-core:1.8.0")
+## How to use
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-crypto-core:VERSION")
 ```
 
-```xml language=xml;title=Maven Dependency;collapse=false;linenumbers=true;firstline=1
+### Maven
+```xml
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
-    <artifactId>mango4j-cryto-core</artifactId>
-    <version>1.8.0</version>
+    <artifactId>mango4j-crypto-core</artifactId>
+    <version>VERSION</version>
 </dependency>
 ```
 
-Happy coding!
+## More
+- [Base documentation](mango4j-crypto-core/basic.md)

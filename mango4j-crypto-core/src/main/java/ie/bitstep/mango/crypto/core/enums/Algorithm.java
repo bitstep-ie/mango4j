@@ -30,11 +30,22 @@ public enum Algorithm {
 		this.algorithm = algorithm;
 	}
 
+	/**
+	 * Returns the algorithm name.
+	 *
+	 * @return the algorithm name
+	 */
 	@JsonValue
 	public String getAlgorithm() {
 		return algorithm;
 	}
 
+	/**
+	 * Parses an algorithm from its string value.
+	 *
+	 * @param value the algorithm value
+	 * @return the matching enum
+	 */
 	@JsonCreator
 	public static Algorithm fromValue(String value) {
 		for (Algorithm v : values()) {

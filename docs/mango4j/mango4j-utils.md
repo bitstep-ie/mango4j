@@ -1,25 +1,30 @@
 # mango4j-utils
 
 ## Overview
+General-purpose utilities used across mango4j modules.
 
-Mango4j utils
+## Architecture
+- Conformance and mutation: `ObjectMutator`, `Conformer`, `@Reduce`, `@Tolerate`, `@Text`.
+- Masking: `Masker` implementations, `MaskerFactory`, `MaskingUtils`.
+- Date/time: `DateUtils`, `CalendarUtils`, `Proximity`, `MovingClock`.
+- Mapping: `MappingUtils` for object-to-map/JSON conversion.
+- URLs and formatting: `URLGenerator`, `QueryParam`, `MapFormat`.
+- Threading and entities: `NamedScheduledExecutorBuilder`, `EntityToStringBuilder`.
 
-## How to use?
-
-### Add the dependency
-
-To make use of the library, import this dependency into your project:
-
-```text language=text;title=Gradle Dependency;collapse=false;linenumbers=true;firstline=1
-implementation("ie.bitstep.mango:mango4j-utils:1.8.0")
+## How to use
+### Gradle
+```gradle
+implementation("ie.bitstep.mango:mango4j-utils:VERSION")
 ```
 
-```xml language=xml;title=Maven Dependency;collapse=false;linenumbers=true;firstline=1
+### Maven
+```xml
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j-utils</artifactId>
-    <version>1.8.0</version>
+    <version>VERSION</version>
 </dependency>
 ```
 
-Happy coding!
+## More
+- [Examples](mango4j-utils/examples.md)

@@ -64,11 +64,22 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 	private final Map<Field, Set<HmacTokenizer>> entityHmacTokenizers = new HashMap<>();
 	private final HmacStrategyHelper hmacStrategyHelper;
 
+	/**
+	 * Creates a list-based HMAC strategy for the supplied entity class.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 * @param hmacStrategyHelper   helper used to compute HMACs
+	 */
 	public ListHmacFieldStrategy(Class<?> annotatedEntityClass, HmacStrategyHelper hmacStrategyHelper) {
 		this.hmacStrategyHelper = hmacStrategyHelper;
 		this.register(annotatedEntityClass);
 	}
 
+	/**
+	 * Registers HMAC and unique group metadata for the entity class.
+	 *
+	 * @param annotatedEntityClass the entity class to register
+	 */
 	private void register(Class<?> annotatedEntityClass) {
 		List<Field> hmacSourceFields = getFieldsByAnnotation(annotatedEntityClass, Hmac.class);
 		validateEntity(annotatedEntityClass, hmacSourceFields);
@@ -80,6 +91,9 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		validateUniqueGroupSet();
 	}
 
+	/**
+	 * Validates that unique group ordering is sequential for each group.
+	 */
 	private void validateUniqueGroupSet() {
 		entityUniqueGroups.getGroups().forEach((uniqueGroupName, uniqueGroup) -> {
 			int count = 1;
@@ -91,11 +105,23 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		});
 	}
 
+	/**
+	 * Validates entity-level constraints for lookup and unique HMAC purposes.
+	 *
+	 * @param annotatedEntityClass the entity class to validate
+	 * @param hmacSourceFields     fields annotated with {@link Hmac}
+	 */
 	private void validateEntity(Class<?> annotatedEntityClass, List<Field> hmacSourceFields) {
 		validateLookupDefinition(annotatedEntityClass, hmacSourceFields);
 		validateUniqueDefinition(annotatedEntityClass, hmacSourceFields);
 	}
 
+	/**
+	 * Validates that unique HMAC purposes are consistent with entity interfaces.
+	 *
+	 * @param annotatedEntityClass the entity class to validate
+	 * @param hmacSourceFields     fields annotated with {@link Hmac}
+	 */
 	private void validateUniqueDefinition(Class<?> annotatedEntityClass, List<Field> hmacSourceFields) {
 		if (hmacSourceFields.stream()
 				.map(field -> field.getAnnotation(Hmac.class))
@@ -106,6 +132,12 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Validates that lookup HMAC purposes are consistent with entity interfaces.
+	 *
+	 * @param annotatedEntityClass the entity class to validate
+	 * @param hmacSourceFields     fields annotated with {@link Hmac}
+	 */
 	private void validateLookupDefinition(Class<?> annotatedEntityClass, List<Field> hmacSourceFields) {
 		if (hmacSourceFields.stream()
 				.map(field -> field.getAnnotation(Hmac.class))
@@ -135,18 +167,41 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Returns the interface associated with the supplied purpose.
+	 *
+	 * @param purpose the HMAC purpose
+	 * @return the interface type
+	 */
 	private static Class<?> correspondingInterface(Hmac.Purposes purpose) {
 		return purpose == Hmac.Purposes.LOOKUP ? Lookup.class : Unique.class;
 	}
 
+	/**
+	 * Validates unique-purpose class requirements.
+	 *
+	 * @param annotatedEntityClass the entity class to validate
+	 */
 	private void validateEntityClassUniqueDefinition(Class<?> annotatedEntityClass) {
 		validateEntityClassDefinition(annotatedEntityClass, Hmac.Purposes.UNIQUE, Unique.class);
 	}
 
+	/**
+	 * Validates lookup-purpose class requirements.
+	 *
+	 * @param annotatedEntityClass the entity class to validate
+	 */
 	private void validateEntityClassLookupDefinition(Class<?> annotatedEntityClass) {
 		validateEntityClassDefinition(annotatedEntityClass, Hmac.Purposes.LOOKUP, Lookup.class);
 	}
 
+	/**
+	 * Validates that the entity class implements the required interface for the purpose.
+	 *
+	 * @param annotatedEntityClass the entity class to validate
+	 * @param purpose              the HMAC purpose
+	 * @param listAwareClass       the interface required for the purpose
+	 */
 	private void validateEntityClassDefinition(Class<?> annotatedEntityClass, Hmac.Purposes purpose,
 											   Class<?> listAwareClass) {
 		if (!listAwareClass.isAssignableFrom(annotatedEntityClass)) {
@@ -159,6 +214,12 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Populates the HMAC field metadata and tokenizers for the entity.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 * @param hmacSourceFields     fields annotated with {@link Hmac}
+	 */
 	private void populateHmacFields(Class<?> annotatedEntityClass, List<Field> hmacSourceFields) {
 		for (Field hmacSourceField : hmacSourceFields) {
 			validateSourceHmacField(hmacSourceField, annotatedEntityClass);
@@ -185,6 +246,11 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Adds non-HMAC fields that are part of {@link UniqueGroup}s.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 */
 	private void populateNonHmacUniqueGroupFields(Class<?> annotatedEntityClass) {
 		Set<Field> nonHmacUniqueGroupFields = getFieldsByAnnotation(annotatedEntityClass, UniqueGroup.class).stream()
 				.filter(field -> !field.isAnnotationPresent(Hmac.class))
@@ -202,11 +268,22 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Calculates HMACs for the supplied entity using the default delegates.
+	 *
+	 * @param entity the entity to HMAC
+	 */
 	@Override
 	public void hmac(Object entity) {
 		this.hmac(entity, null);
 	}
 
+	/**
+	 * Calculates HMACs for the supplied entity with an optional rekey delegate.
+	 *
+	 * @param entity                       the entity to HMAC
+	 * @param listHmacFieldStrategyDelegate optional delegate for rekey operations
+	 */
 	void hmac(Object entity, ListHmacFieldStrategyDelegate listHmacFieldStrategyDelegate) {
 		Set<HmacHolder> allHmacHolders = new HashSet<>();
 		List<HmacHolder> lookupHmacs = new ArrayList<>();
@@ -229,6 +306,14 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Builds lookup and unique HMAC holder lists for the entity.
+	 *
+	 * @param entity                       the entity to inspect
+	 * @param listHmacFieldStrategyDelegate optional delegate for rekey operations
+	 * @param uniqueHmacs                  output list for unique HMACs
+	 * @param lookupHmacs                  output list for lookup HMACs
+	 */
 	private void populateHmacHolders(Object entity, ListHmacFieldStrategyDelegate listHmacFieldStrategyDelegate,
 									 List<HmacHolder> uniqueHmacs, List<HmacHolder> lookupHmacs) {
 
@@ -260,12 +345,23 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		populateCompoundUniqueHmacs(entity, uniqueHmacs);
 	}
 
+	/**
+	 * Validates that at least one HMAC key is available.
+	 *
+	 * @param currentHmacKeys the current HMAC key list
+	 */
 	private static void validateHmacKeys(List<CryptoKey> currentHmacKeys) {
 		if (currentHmacKeys == null || currentHmacKeys.isEmpty()) {
 			throw new NoHmacKeysFoundException();
 		}
 	}
 
+	/**
+	 * Populates compound unique HMACs for unique groups.
+	 *
+	 * @param entity       the entity to inspect
+	 * @param uniqueHmacs  output list for unique HMACs
+	 */
 	private void populateCompoundUniqueHmacs(Object entity, List<HmacHolder> uniqueHmacs) {
 		UniqueGroupSet entityUniqueGroups = new UniqueGroupSet(this.entityUniqueGroups);
 		entityUniqueGroups.getGroups().forEach((groupName, group) -> {
@@ -285,10 +381,23 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		});
 	}
 
+	/**
+	 * Checks if the field belongs to a unique group.
+	 *
+	 * @param sourceField the field to check
+	 * @return true if the field is part of a unique group
+	 */
 	private boolean belongsToGroup(Field sourceField) {
 		return entityUniqueGroups.contains(sourceField);
 	}
 
+	/**
+	 * Updates entity lookup/unique lists, retaining any existing HMACs not regenerated.
+	 *
+	 * @param entity            the entity to update
+	 * @param newLookupHmacs    newly generated lookup HMACs
+	 * @param newUniqueValueHmacs newly generated unique HMACs
+	 */
 	private static void postProcess(Object entity, List<HmacHolder> newLookupHmacs, List<HmacHolder> newUniqueValueHmacs) {
 		if (Lookup.class.isAssignableFrom(entity.getClass())) {
 			retainExistingHmacs(((Lookup) entity)::getLookups, ((Lookup) entity)::setLookups, newLookupHmacs);
@@ -299,6 +408,13 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Retains existing HMACs not present in the newly generated list.
+	 *
+	 * @param existingEntityHmacsSupplier supplier of existing HMAC holders
+	 * @param hmacsConsumer               consumer to store the updated list
+	 * @param newHmacHolders              newly generated HMACs
+	 */
 	private static void retainExistingHmacs(Supplier<Collection<CryptoShieldHmacHolder>> existingEntityHmacsSupplier,
 											Consumer<Collection<CryptoShieldHmacHolder>> hmacsConsumer,
 											List<HmacHolder> newHmacHolders) {
@@ -320,6 +436,13 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Builds tokenized HMACs for the supplied field using configured tokenizers.
+	 *
+	 * @param defaultHmacHoldersForThisField default HMAC holders for the field
+	 * @param sourceField                   the source field being tokenized
+	 * @return a list of tokenized HMAC holders
+	 */
 	private Collection<HmacHolder> buildTokenizedHmacHolders(Collection<HmacHolder> defaultHmacHoldersForThisField, Field sourceField) {
 		List<HmacHolder> tokenizedHmacHolders;
 		tokenizedHmacHolders = defaultHmacHoldersForThisField.stream().
@@ -329,12 +452,25 @@ public class ListHmacFieldStrategy implements HmacStrategy {
 		return tokenizedHmacHolders;
 	}
 
+	/**
+	 * Builds default HMAC holders for the supplied field and value.
+	 *
+	 * @param currentHmacKeys the current HMAC keys
+	 * @param sourceField     the source field
+	 * @param fieldValue      the field value
+	 * @return default HMAC holders
+	 */
 	Collection<HmacHolder> getDefaultHmacHolders(List<CryptoKey> currentHmacKeys, Field sourceField, String fieldValue) {
 		return currentHmacKeys.stream()
 				.map(cryptoKey -> new HmacHolder(cryptoKey, fieldValue, sourceField.getName()))
 				.toList();
 	}
 
+	/**
+	 * Returns the current list of HMAC keys.
+	 *
+	 * @return current HMAC keys
+	 */
 	List<CryptoKey> getCurrentHmacKeys() {
 		return hmacStrategyHelper.cryptoKeyProvider().getCurrentHmacKeys();
 	}

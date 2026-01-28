@@ -7,15 +7,20 @@ import java.util.List;
 import java.util.Map;
 
 public class MapUtilsInternal {
+	/**
+	 * Prevents instantiation.
+	 */
 	private MapUtilsInternal() { // NOSONAR
 		// SONAR
 	}
 
 	/**
-	 * @param source
-	 * @param target
-	 * @param injectMissing
-	 * @return
+	 * Creates an immutable-style copy by overlaying source onto target.
+	 *
+	 * @param source the source map
+	 * @param target the target map to overlay onto
+	 * @param injectMissing whether to add missing keys from source
+	 * @return the merged copy
 	 */
 	static Map<Object, Object> immutableCopy(Map<Object, Object> source, Map<Object, Object> target, boolean injectMissing) {
 		Map<Object, Object> copy = new LinkedHashMap<>();
@@ -36,10 +41,11 @@ public class MapUtilsInternal {
 	}
 
 	/**
+	 * Overlays a single entry into the target.
 	 *
-	 * @param entry
-	 * @param target
-	 * @param injectMissing
+	 * @param entry the entry to overlay
+	 * @param target the target map
+	 * @param injectMissing whether to add missing keys
 	 */
 	static void overlay(Map.Entry<Object, Object> entry, Map<Object, Object> target, boolean injectMissing) {
 		if (target.containsKey(entry.getKey()) || injectMissing) {
@@ -54,9 +60,11 @@ public class MapUtilsInternal {
 	}
 
 	/**
-	 * @param entry
-	 * @param target
-	 * @param injectMissing
+	 * Overlays a list entry into the target map.
+	 *
+	 * @param entry the entry to overlay
+	 * @param target the target map
+	 * @param injectMissing whether to add missing keys
 	 */
 	static void doListOverlay(Map.Entry<Object, Object> entry, Map<Object, Object> target, boolean injectMissing) {
 		if (target.containsKey(entry.getKey()) || injectMissing) {
@@ -66,9 +74,11 @@ public class MapUtilsInternal {
 	}
 
 	/**
-	 * @param entry
-	 * @param target
-	 * @param injectMissing
+	 * Overlays a map entry into the target map.
+	 *
+	 * @param entry the entry to overlay
+	 * @param target the target map
+	 * @param injectMissing whether to add missing keys
 	 */
 	static void doMapOverlay(Map.Entry<Object, Object> entry, Map<Object, Object> target, boolean injectMissing) {
 		if (!target.containsKey(entry.getKey()) && injectMissing) {
@@ -79,10 +89,12 @@ public class MapUtilsInternal {
 	}
 
 	/**
-	 * @param source
-	 * @param target
-	 * @param injectMissing
-	 * @return
+	 * Copies a list, recursively cloning nested lists/maps.
+	 *
+	 * @param source the source list
+	 * @param target the target list
+	 * @param injectMissing whether to add missing keys in nested maps
+	 * @return the target list
 	 */
 	static List<Object> copyTo(List<Object> source, List<Object> target, boolean injectMissing) {
 		for (Object o : source) {
@@ -100,10 +112,12 @@ public class MapUtilsInternal {
 	}
 
 	/**
-	 * @param source
-	 * @param target
-	 * @param injectMissing
-	 * @return
+	 * Copies a map, recursively cloning nested maps/lists.
+	 *
+	 * @param source the source map
+	 * @param target the target map
+	 * @param injectMissing whether to add missing keys
+	 * @return the target map
 	 */
 	static Map<Object, Object> copyTo(Map<Object, Object> source, Map<Object, Object> target, boolean injectMissing) {
 		for (Map.Entry<Object, Object> e : source.entrySet()) {
@@ -113,6 +127,16 @@ public class MapUtilsInternal {
 		return target;
 	}
 
+	/**
+	 * Gets a nested path from the map, optionally creating missing nodes.
+	 *
+	 * @param m the map to traverse
+	 * @param create whether to create missing path nodes
+	 * @param it iterator of path keys
+	 * @param <K> the key type
+	 * @param <V> the value type
+	 * @return the map at the path
+	 */
 	static <K, V> Map<K, V> getPath(Map m, boolean create, Iterator<String> it) { // NOSONAR - provide parameterized type
 		if (m != null) {
 			if (!it.hasNext()) {
@@ -139,6 +163,14 @@ public class MapUtilsInternal {
 		throw new IllegalArgumentException();
 	}
 
+	/**
+	 * Inserts an empty map node at the specified key.
+	 *
+	 * @param m the map to modify
+	 * @param key the key to insert
+	 * @param <K> the key type
+	 * @param <V> the value type
+	 */
 	@SuppressWarnings("unchecked")
 	static <K, V> void insertMapNode(Map m, String key) { // NOSONAR - provide parameterized type
 		m.put(key, new LinkedHashMap<K, V>());
