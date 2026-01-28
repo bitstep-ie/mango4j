@@ -90,6 +90,10 @@ public class CryptoKey {
 	 * Optional Field, only used for rekey functionality. This field can be left null. But if an
 	 * application needs to rekey records which use/do not use certain keys then this must be set to
 	 * the corresponding value.
+	 * <p>
+	 * <h4>NOTE: This and the {@link CryptoKey#lastModifiedDate} field are the only fields which should ever be updatable on a {@link CryptoKey}!!
+	 * All other fields should be considered read-only or data might be irreversibly corrupted/lost.</h4>
+	 * </P>
 	 */
 	private RekeyMode rekeyMode;
 
@@ -100,129 +104,80 @@ public class CryptoKey {
 	private Instant createdDate;
 
 	/**
-	 * Returns the key ID.
-	 *
-	 * @return the key ID
+	 * Semi-Optional field. All HMAC {@link CryptoKey CryptoKeys} must set this value to a valid (immutable) date
+	 * when the key is marked as deleted.
+	 * If this field is not updated when a HMAC {@link CryptoKey CryptoKeys} is marked as deleted,
+	 * then the purge redundant HMACs functionality will not work for that key. This would leave useless HMACs in the system.
+	 * This wouldn't break anything but data should be kept clean.
+	 * <p>
+	 * <h4>NOTE: This and the {@link CryptoKey#rekeyMode} field are the only fields which should ever be updatable on a {@link CryptoKey}!!
+	 * All other fields should be considered read-only or data might be irreversibly corrupted/lost.</h4>
+	 * </P>
 	 */
+	private Instant lastModifiedDate;
+
 	public String getId() {
 		return id;
 	}
 
-	/**
-	 * Sets the key ID.
-	 *
-	 * @param id the key ID
-	 */
 	public void setId(String id) {
 		this.id = id;
 	}
 
-	/**
-	 * Returns the key type.
-	 *
-	 * @return the key type
-	 */
 	public String getType() {
 		return type;
 	}
 
-	/**
-	 * Sets the key type.
-	 *
-	 * @param type the key type
-	 */
 	public void setType(String type) {
 		this.type = type;
 	}
 
-	/**
-	 * Returns the key usage.
-	 *
-	 * @return the key usage
-	 */
 	public CryptoKeyUsage getUsage() {
 		return usage;
 	}
 
-	/**
-	 * Sets the key usage.
-	 *
-	 * @param usage the key usage
-	 */
 	public void setUsage(CryptoKeyUsage usage) {
 		this.usage = usage;
 	}
 
-	/**
-	 * Returns the key start time.
-	 *
-	 * @return the key start time
-	 */
 	public Instant getKeyStartTime() {
 		return keyStartTime;
 	}
 
-	/**
-	 * Sets the key start time.
-	 *
-	 * @param keyStartTime the key start time
-	 */
 	public void setKeyStartTime(Instant keyStartTime) {
 		this.keyStartTime = keyStartTime;
 	}
 
-	/**
-	 * Returns the tenant ID.
-	 *
-	 * @return the tenant ID
-	 */
 	public String getTenantId() {
 		return tenantId;
 	}
 
-	/**
-	 * Sets the tenant ID.
-	 *
-	 * @param tenantId the tenant ID
-	 */
 	public void setTenantId(String tenantId) {
 		this.tenantId = tenantId;
 	}
 
-	/**
-	 * Returns the rekey mode.
-	 *
-	 * @return the rekey mode
-	 */
 	public RekeyMode getRekeyMode() {
 		return rekeyMode;
 	}
 
-	/**
-	 * Sets the rekey mode.
-	 *
-	 * @param rekeyMode the rekey mode
-	 */
 	public void setRekeyMode(RekeyMode rekeyMode) {
 		this.rekeyMode = rekeyMode;
 	}
 
-	/**
-	 * Returns the key created date.
-	 *
-	 * @return the created date
-	 */
 	public Instant getCreatedDate() {
 		return createdDate;
 	}
 
-	/**
-	 * Sets the key created date.
-	 *
-	 * @param createdDate the created date
-	 */
 	public void setCreatedDate(Instant createdDate) {
 		this.createdDate = createdDate;
+	}
+
+	public Instant getLastModifiedDate() {
+		return lastModifiedDate;
+	}
+
+	public void setLastModifiedDate(Instant lastModifiedDate) {
+		this.lastModifiedDate = lastModifiedDate;
 	}
 
 	/**
@@ -239,21 +194,11 @@ public class CryptoKey {
 		return Objects.equals(id, cryptoKey.id);
 	}
 
-	/**
-	 * Returns the hash code for this key.
-	 *
-	 * @return the hash code
-	 */
 	@Override
 	public int hashCode() {
 		return Objects.hash(id);
 	}
 
-	/**
-	 * Returns a string representation of this key.
-	 *
-	 * @return the string representation
-	 */
 	@Override
 	public String toString() {
 		return "CryptoKey{" +
@@ -267,20 +212,10 @@ public class CryptoKey {
 				'}';
 	}
 
-	/**
-	 * Returns the configuration payload for this key.
-	 *
-	 * @return the configuration map
-	 */
 	public Map<String, Object> getConfiguration() {
 		return configuration;
 	}
 
-	/**
-	 * Sets the configuration payload for this key.
-	 *
-	 * @param configuration the configuration map
-	 */
 	public void setConfiguration(Map<String, Object> configuration) {
 		this.configuration = configuration;
 	}

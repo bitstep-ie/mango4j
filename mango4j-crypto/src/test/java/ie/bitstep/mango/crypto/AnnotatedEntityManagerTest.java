@@ -185,7 +185,7 @@ class AnnotatedEntityManagerTest {
 		assertThatThrownBy(() -> new AnnotatedEntityManager(annotatedEntityClasses, mockHmacStrategyHelper))
 				.isInstanceOf(NonTransientCryptoException.class)
 				.hasMessage("InvalidAnnotatedEntityForDoubleHmacFieldStrategyNoEncryptedBlobField has a field marked with @Encrypt but without a " +
-						"corresponding field marked with @EncryptedBlob");
+						"corresponding field marked with @EncryptedData/@EncryptedBlob");
 	}
 
 	@Test

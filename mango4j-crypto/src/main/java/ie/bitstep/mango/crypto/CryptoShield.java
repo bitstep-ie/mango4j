@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import ie.bitstep.mango.crypto.annotations.Encrypt;
-import ie.bitstep.mango.crypto.annotations.EncryptedBlob;
+import ie.bitstep.mango.crypto.annotations.EncryptedData;
 import ie.bitstep.mango.crypto.annotations.Hmac;
 import ie.bitstep.mango.crypto.core.domain.CiphertextContainer;
 import ie.bitstep.mango.crypto.core.domain.CryptoKey;
@@ -16,6 +16,7 @@ import ie.bitstep.mango.crypto.core.encryption.EncryptionServiceDelegate;
 import ie.bitstep.mango.crypto.core.exceptions.ActiveEncryptionKeyNotFoundException;
 import ie.bitstep.mango.crypto.core.exceptions.NonTransientCryptoException;
 import ie.bitstep.mango.crypto.core.exceptions.TransientCryptoException;
+import ie.bitstep.mango.crypto.core.factories.ConfigurableObjectMapperFactory;
 import ie.bitstep.mango.crypto.core.factories.ObjectMapperFactory;
 import ie.bitstep.mango.crypto.core.formatters.CiphertextFormatter;
 import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
@@ -36,12 +37,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.UnaryOperator;
 
 import static java.lang.String.valueOf;
+import static java.lang.System.Logger.Level.ERROR;
 
 /**
  * Applications that use Entities annotated with the mango4j-crypto annotations (
  * {@link Encrypt @Encrypt},
  * {@link Hmac @Hmac} and
- * {@link EncryptedBlob @EncryptedBlob}) can use the methods in this class to perform
+ * {@link EncryptedData @EncryptedData}) can use the methods in this class to perform
  * their cryptographic operations instead of calling {@link EncryptionService} directly.
  * Your annotated entities must first be registered by passing them to the
  * {@link AnnotatedEntityManager#AnnotatedEntityManager(Collection, HmacStrategyHelper)} on application startup
@@ -58,7 +60,7 @@ public class CryptoShield {
 	private final CryptoShieldDelegate cryptoShieldDelegate;
 	private final RetryConfiguration retryConfiguration;
 
-	public static final String A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S = "A %s error occurred trying to get the value of field: %s on type: %s";
+	private static final String A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S = "A %s error occurred trying to get the value of field: %s on type: %s";
 
 	public static class Builder {
 		private Collection<Class<?>> annotatedEntities;
@@ -67,21 +69,16 @@ public class CryptoShield {
 		private List<EncryptionServiceDelegate> encryptionServiceDelegates;
 		private RetryConfiguration retryConfiguration;
 
-		/**
-		 * Sets the collection of annotated entity classes to register.
-		 *
-		 * @param annotatedEntities the annotated entity types
-		 * @return this builder
-		 */
 		public Builder withAnnotatedEntities(Collection<Class<?>> annotatedEntities) {
 			this.annotatedEntities = annotatedEntities;
 			return this;
 		}
 
 		/**
-		 * Sets the {@link ObjectMapperFactory} used for serialization and cryptographic payload formatting.
+		 * If this builder method isn't used then we default to {@link ConfigurableObjectMapperFactory}
 		 *
-		 * @param objectMapperFactory the factory to use
+		 * @param objectMapperFactory Implementation of {@link ObjectMapperFactory} that the application wants the
+		 *                            library to use
 		 * @return this builder
 		 */
 		public Builder withObjectMapperFactory(ObjectMapperFactory objectMapperFactory) {
@@ -89,44 +86,21 @@ public class CryptoShield {
 			return this;
 		}
 
-		/**
-		 * Sets the {@link CryptoKeyProvider} used to resolve encryption and HMAC keys.
-		 *
-		 * @param cryptoKeyProvider the key provider
-		 * @return this builder
-		 */
 		public Builder withCryptoKeyProvider(CryptoKeyProvider cryptoKeyProvider) {
 			this.cryptoKeyProvider = cryptoKeyProvider;
 			return this;
 		}
 
-		/**
-		 * Sets the list of {@link EncryptionServiceDelegate} implementations.
-		 *
-		 * @param encryptionServiceDelegates the delegates to use
-		 * @return this builder
-		 */
 		public Builder withEncryptionServiceDelegates(List<EncryptionServiceDelegate> encryptionServiceDelegates) {
 			this.encryptionServiceDelegates = encryptionServiceDelegates;
 			return this;
 		}
 
-		/**
-		 * Sets optional retry configuration for transient crypto failures.
-		 *
-		 * @param retryConfiguration the retry configuration, or null to disable retries
-		 * @return this builder
-		 */
 		public Builder withRetryConfiguration(RetryConfiguration retryConfiguration) {
 			this.retryConfiguration = retryConfiguration;
 			return this;
 		}
 
-		/**
-		 * Builds a {@link CryptoShield} from the configured inputs.
-		 *
-		 * @return a new {@link CryptoShield} instance
-		 */
 		public CryptoShield build() {
 			return new CryptoShield(
 					annotatedEntities,
@@ -143,6 +117,9 @@ public class CryptoShield {
 						CryptoKeyProvider cryptoKeyProvider,
 						List<EncryptionServiceDelegate> encryptionServiceDelegates,
 						RetryConfiguration retryConfiguration) {
+		if (objectMapperFactory == null) {
+			objectMapperFactory = new ConfigurableObjectMapperFactory();
+		}
 		this.objectMapper = objectMapperFactory.objectMapper();
 		this.ciphertextFormatter = new CiphertextFormatter(cryptoKeyProvider, objectMapperFactory);
 		this.cryptoKeyProvider = cryptoKeyProvider;
@@ -156,8 +133,8 @@ public class CryptoShield {
 							.poolSize(retryConfiguration.poolSize())
 							.threadNamePrefix("crypto-retry-task")
 							.uncaughtExceptionHandler((t, e) ->
-// log or handle uncaught exceptions
-											logger.log(System.Logger.Level.ERROR, "Uncaught in {0}: {1}", t.getName(), e)
+									// log or handle uncaught exceptions
+									logger.log(ERROR, "Uncaught in {0}: {1}", t.getName(), e)
 							)
 							.removeOnCancelPolicy(true)
 							.build();
@@ -167,22 +144,11 @@ public class CryptoShield {
 
 		this.cryptoShieldDelegate = new CryptoShieldDelegate() {
 
-			/**
-			 * Returns the HMAC strategy for the supplied entity type.
-			 *
-			 * @param entity the entity instance
-			 * @return the HMAC strategy, if present
-			 */
 			@Override
 			public Optional<HmacStrategy> getHmacStrategy(Object entity) {
 				return annotatedEntityManager.getHmacStrategy(entity.getClass());
 			}
 
-			/**
-			 * Returns the current encryption key.
-			 *
-			 * @return the current encryption key
-			 */
 			@Override
 			public CryptoKey getCurrentEncryptionKey() {
 				return cryptoKeyProvider.getCurrentEncryptionKey();
@@ -192,7 +158,7 @@ public class CryptoShield {
 
 	/**
 	 * This method will encrypt/HMAC all (annotated) fields in your entity and set the corresponding
-	 * {@link EncryptedBlob EncryptedBlob} and HMAC fields
+	 * {@link EncryptedData EncryptedData} and HMAC fields
 	 * with the resulting values. The original (transient) fields marked with
 	 * {@link Encrypt Encrypt} and
 	 * {@link Hmac} will not be modified.
@@ -200,16 +166,8 @@ public class CryptoShield {
 	 * @param entity Your annotated (and registered) entity
 	 */
 	public void encrypt(Object entity) {
-		if (entity instanceof Collection<?> collection) {
-			collection.forEach(e -> encrypt(e, cryptoShieldDelegate));
-		} else if (entity != null && entity.getClass().isArray()) {
-			if (!Object.class.isAssignableFrom(entity.getClass().getComponentType())) {
-				throw new NonTransientCryptoException(String.format("encrypt() method doesn't support arrays of primitive types (%s)", entity.getClass().componentType()));
-			}
-			Arrays.stream((Object[]) entity).forEach(e -> encrypt(e, cryptoShieldDelegate));
-		} else {
-			encrypt(entity, cryptoShieldDelegate);
-		}
+		// Do NOT add another line to this public method unless you know what you're doing!!!
+		encrypt(entity, cryptoShieldDelegate);
 	}
 
 	/**
@@ -254,13 +212,6 @@ public class CryptoShield {
 		return serializedEntity;
 	}
 
-	/**
-	 * Resets transient source fields to their original values after serialization.
-	 *
-	 * @param serializedEntity the entity returned by the serialization function
-	 * @param originalValues   the original field values captured before encryption
-	 * @param <T>              the entity type
-	 */
 	private <T> void resetSourceValues(T serializedEntity, Map<Field, Object> originalValues) {
 		if (serializedEntity == null) {
 			throw new NonTransientCryptoException("The supplied serialization function returned a null entity, so cannot reset source fields");
@@ -289,6 +240,16 @@ public class CryptoShield {
 			return;
 		}
 
+		// recursive block just in case a collection/array was passed
+		if (entity instanceof Collection<?> collection) {
+			collection.forEach(e -> encrypt(e, cryptoShieldDelegate));
+		} else if (entity.getClass().isArray()) {
+			if (!Object.class.isAssignableFrom(entity.getClass().getComponentType())) {
+				throw new NonTransientCryptoException(String.format("encrypt() method doesn't support arrays of primitive types (%s)", entity.getClass().componentType()));
+			}
+			Arrays.stream((Object[]) entity).forEach(e -> encrypt(e, cryptoShieldDelegate));
+		}
+
 		if (retryConfiguration == null) {
 			doEncrypt(entity, cryptoShieldDelegate);
 		} else {
@@ -296,11 +257,6 @@ public class CryptoShield {
 		}
 	}
 
-	/**
-	 * Executes the provided command with configured retry/backoff on transient failures.
-	 *
-	 * @param command the command to execute
-	 */
 	private void retryableCommand(Runnable command) {
 		long backoffDelayInMilliseconds = 0;
 
@@ -327,24 +283,12 @@ public class CryptoShield {
 		}
 	}
 
-	/**
-	 * Performs encryption and HMAC population for a single entity.
-	 *
-	 * @param entity               the entity to encrypt
-	 * @param cryptoShieldDelegate the delegate used to access crypto services
-	 */
 	private void doEncrypt(Object entity, CryptoShieldDelegate cryptoShieldDelegate) {
 		setHmacFields(entity, cryptoShieldDelegate);
 		setEncryptedDataField(entity, cryptoShieldDelegate);
 		setCascadedFields(entity, cryptoShieldDelegate);
 	}
 
-	/**
-	 * Encrypts nested fields annotated for cascade encryption.
-	 *
-	 * @param entity               the parent entity
-	 * @param cryptoShieldDelegate the delegate used to access crypto services
-	 */
 	private void setCascadedFields(Object entity, CryptoShieldDelegate cryptoShieldDelegate) {
 		annotatedEntityManager.getFieldsToCascadeEncrypt(entity.getClass())
 				.forEach(cascadedField -> {
@@ -360,23 +304,10 @@ public class CryptoShield {
 				});
 	}
 
-	/**
-	 * Generates HMACs for the supplied source value using current keys.
-	 *
-	 * @param sourceValue the source value to HMAC
-	 * @return generated HMAC holders
-	 */
 	public Collection<HmacHolder> generateHmacs(String sourceValue) {
 		return generateHmacs(sourceValue, null);
 	}
 
-	/**
-	 * Generates HMACs for the supplied source value and name using current keys.
-	 *
-	 * @param sourceValue the source value to HMAC
-	 * @param name        optional logical name for the HMAC holders
-	 * @return generated HMAC holders
-	 */
 	public Collection<HmacHolder> generateHmacs(String sourceValue, String name) {
 		List<HmacHolder> hmacHolders = cryptoKeyProvider.getCurrentHmacKeys().stream()
 				.map(cryptoKey -> new HmacHolder(cryptoKey, sourceValue, name))
@@ -385,42 +316,32 @@ public class CryptoShield {
 		return hmacHolders;
 	}
 
-	/**
-	 * Applies the configured HMAC strategy to the entity, if any.
-	 *
-	 * @param entity               the entity to HMAC
-	 * @param cryptoShieldDelegate the delegate used to resolve the strategy
-	 */
 	private void setHmacFields(Object entity, CryptoShieldDelegate cryptoShieldDelegate) {
 		cryptoShieldDelegate.getHmacStrategy(entity)
 				.ifPresent(hmacStrategy -> hmacStrategy.hmac(entity));
 	}
 
-	/**
-	 * Returns the HMAC strategy for the entity type, if configured.
-	 *
-	 * @param entity the entity to inspect
-	 * @return the resolved {@link HmacStrategy}, if present
-	 */
 	Optional<HmacStrategy> getHmacStrategy(Object entity) {
 		return annotatedEntityManager.getHmacStrategy(entity.getClass());
 	}
 
-	/**
-	 * Serializes and encrypts fields annotated for encryption, then stores ciphertext and key metadata.
-	 *
-	 * @param entity               the entity to encrypt
-	 * @param cryptoShieldDelegate the delegate used to access crypto services
-	 */
 	private void setEncryptedDataField(Object entity, CryptoShieldDelegate cryptoShieldDelegate) {
 		List<Field> encryptedFields = annotatedEntityManager.getFieldsToEncrypt(entity.getClass());
 		if (encryptedFields.isEmpty()) {
-// maybe this entity only has HMACs
+			// maybe this entity only has HMACs
 			return;
 		}
 
 		if (cryptoShieldDelegate.getCurrentEncryptionKey() == null) {
-			throw new ActiveEncryptionKeyNotFoundException();
+			// TODO: The delegate check is needed due to the fact that currently the rekey job (currently in BETA) does the
+			// re-encrypt and re-HMAC operations separately so cryptoShieldDelegate.getCurrentEncryptionKey() returns null
+			// here for the re-HMAC job which isn't a problem and we just return immediately cause there's no encryption to do.
+			// This all needs removed when the rekey stuff is refactored.
+			if (cryptoShieldDelegate != this.cryptoShieldDelegate) {
+				return;
+			} else {
+				throw new ActiveEncryptionKeyNotFoundException();
+			}
 		}
 
 		ObjectNode rootNode = objectMapper.createObjectNode();
@@ -438,6 +359,7 @@ public class CryptoShield {
 				throw new NonTransientCryptoException(String.format(A_S_ERROR_OCCURRED_TRYING_TO_GET_THE_VALUE_OF_FIELD_S_ON_TYPE_S, e.getClass().getSimpleName(), sourceField.getName(), entity.getClass().getSimpleName()), e);
 			}
 		});
+
 		try {
 			if (!rootNode.isEmpty()) {
 				String finalCipherText = ciphertextFormatter.format(doEncrypt(rootNode, cryptoShieldDelegate));
@@ -454,14 +376,6 @@ public class CryptoShield {
 		}
 	}
 
-	/**
-	 * Encrypts a serialized JSON payload into a ciphertext container.
-	 *
-	 * @param rootNode             the JSON payload to encrypt
-	 * @param cryptoShieldDelegate the delegate used to access crypto services
-	 * @return the encrypted ciphertext container
-	 * @throws JsonProcessingException when JSON serialization fails
-	 */
 	private CiphertextContainer doEncrypt(ObjectNode rootNode, CryptoShieldDelegate cryptoShieldDelegate) throws JsonProcessingException {
 		return encryptionService.encrypt(cryptoShieldDelegate.getCurrentEncryptionKey(), objectMapper.writeValueAsString(rootNode));
 	}
@@ -490,21 +404,11 @@ public class CryptoShield {
 
 	}
 
-	/**
-	 * Performs decryption for a single entity.
-	 *
-	 * @param entity the entity to decrypt
-	 */
 	private void doDecrypt(Object entity) {
 		resetFieldsFromEncryptedData(entity);
 		resetCascadedFieldsFromEncryptedData(entity);
 	}
 
-	/**
-	 * Decrypts cascaded fields annotated for cascade encryption.
-	 *
-	 * @param entity the parent entity
-	 */
 	private void resetCascadedFieldsFromEncryptedData(Object entity) {
 		annotatedEntityManager.getFieldsToCascadeEncrypt(entity.getClass())
 				.forEach(cascadedField -> {
@@ -520,32 +424,19 @@ public class CryptoShield {
 				});
 	}
 
-	/**
-	 * Checks whether a field holds a non-null collection that can be cascaded.
-	 *
-	 * @param entity        the entity instance
-	 * @param cascadedField the field to check
-	 * @return true when the field is a non-null collection
-	 * @throws IllegalAccessException when field access fails
-	 */
 	private static boolean isProcessableCollection(Object entity, Field cascadedField) throws IllegalAccessException {
 		return Collection.class.isAssignableFrom(cascadedField.getType()) &&
 				cascadedField.get(entity) != null;
 	}
 
 	@SuppressWarnings({"java:S2209"})
-// Sonar bug: incorrectly flags line as java:S2209. Thinks it's a static reference, no idea why.
-	/**
-	 * Restores encrypted fields from the ciphertext stored in the encrypted blob field.
-	 *
-	 * @param entity the entity to decrypt
-	 */
+	// Sonar bug: incorrectly flags line as java:S2209. Thinks it's a static reference, no idea why.
 	private void resetFieldsFromEncryptedData(Object entity) {
 		try {
 			List<Field> fieldsToEncrypt = annotatedEntityManager.getFieldsToEncrypt(entity.getClass());
 			if (fieldsToEncrypt.isEmpty()) {
-// maybe this entity only has HMACs - revisit: should we throw an exception here to warn
-// app that decrypt was called on an object that can't be decrypted?
+				// TODO: maybe this entity only has HMACs - revisit: should we throw an exception here to warn
+				// app that decrypt was called on an object that can't be decrypted?
 				return;
 			}
 
@@ -569,11 +460,6 @@ public class CryptoShield {
 		}
 	}
 
-	/**
-	 * Returns the configured {@link CryptoKeyProvider}.
-	 *
-	 * @return the crypto key provider
-	 */
 	public CryptoKeyProvider getCryptoKeyProvider() {
 		return cryptoKeyProvider;
 	}

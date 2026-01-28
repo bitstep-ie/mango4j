@@ -41,7 +41,7 @@ public class CiphertextFormatter {
 			String cryptoKeyId = jsonNode.get(CRYPTO_KEY_ID_ATTRIBUTE_NAME).asText();
 
 			JsonNode dataNode = jsonNode.get(DATA_ATTRIBUTE_NAME);
-			return  new CiphertextContainer(cryptoKeyProvider.getById(cryptoKeyId), objectMapperFactory.objectMapper().convertValue(dataNode, new TypeReference<>() {
+			return new CiphertextContainer(cryptoKeyProvider.getById(cryptoKeyId), objectMapperFactory.objectMapper().convertValue(dataNode, new TypeReference<>() {
 			}));
 		} catch (JsonProcessingException e) {
 			throw new CiphertextFormatterException(String.format("An error occurred trying to parse the String into a %s", CiphertextContainer.class.getSimpleName()), e);
