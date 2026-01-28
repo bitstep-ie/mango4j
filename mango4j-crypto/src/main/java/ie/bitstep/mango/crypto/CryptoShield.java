@@ -16,6 +16,7 @@ import ie.bitstep.mango.crypto.core.encryption.EncryptionServiceDelegate;
 import ie.bitstep.mango.crypto.core.exceptions.ActiveEncryptionKeyNotFoundException;
 import ie.bitstep.mango.crypto.core.exceptions.NonTransientCryptoException;
 import ie.bitstep.mango.crypto.core.exceptions.TransientCryptoException;
+import ie.bitstep.mango.crypto.core.factories.ConfigurableObjectMapperFactory;
 import ie.bitstep.mango.crypto.core.factories.ObjectMapperFactory;
 import ie.bitstep.mango.crypto.core.formatters.CiphertextFormatter;
 import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
@@ -73,6 +74,13 @@ public class CryptoShield {
 			return this;
 		}
 
+		/**
+		 * If this builder method isn't used then we default to {@link ConfigurableObjectMapperFactory}
+		 *
+		 * @param objectMapperFactory Implementation of {@link ObjectMapperFactory} that the application wants the
+		 *                            library to use
+		 * @return this builder
+		 */
 		public Builder withObjectMapperFactory(ObjectMapperFactory objectMapperFactory) {
 			this.objectMapperFactory = objectMapperFactory;
 			return this;
@@ -109,6 +117,9 @@ public class CryptoShield {
 						CryptoKeyProvider cryptoKeyProvider,
 						List<EncryptionServiceDelegate> encryptionServiceDelegates,
 						RetryConfiguration retryConfiguration) {
+		if (objectMapperFactory == null) {
+			objectMapperFactory = new ConfigurableObjectMapperFactory();
+		}
 		this.objectMapper = objectMapperFactory.objectMapper();
 		this.ciphertextFormatter = new CiphertextFormatter(cryptoKeyProvider, objectMapperFactory);
 		this.cryptoKeyProvider = cryptoKeyProvider;
