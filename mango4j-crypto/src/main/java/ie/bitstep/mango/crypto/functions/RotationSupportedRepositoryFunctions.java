@@ -17,10 +17,21 @@ import java.util.function.BiFunction;
  */
 public final class RotationSupportedRepositoryFunctions {
 
+	/**
+	 * Prevents instantiation.
+	 */
 	private RotationSupportedRepositoryFunctions() {
 		throw new AssertionError();
 	}
 
+	/**
+	 * Executes a repository search that returns an optional using up to two HMAC values.
+	 *
+	 * @param repositorySearchFunction the repository search function
+	 * @param hmacHolders the HMAC holders
+	 * @param <T> result type
+	 * @return the optional result
+	 */
 	public static <T> Optional<T> executeOptionalReturningBiFunction(BiFunction<String, String, Optional<T>> repositorySearchFunction,
 																	 List<HmacHolder> hmacHolders) {
 		Optional<T> result = repositorySearchFunction.apply(hmacHolders.get(0).getValue(), hmacHolders.get(0).getValue());
@@ -30,6 +41,14 @@ public final class RotationSupportedRepositoryFunctions {
 		return result;
 	}
 
+	/**
+	 * Executes a repository search that returns a list using up to two HMAC values.
+	 *
+	 * @param repositorySearchFunction the repository search function
+	 * @param hmacHolders the HMAC holders
+	 * @param <T> result type
+	 * @return the results list
+	 */
 	public static <T> List<T> executeListReturningBiFunction(BiFunction<String, String, List<T>> repositorySearchFunction,
 															 List<HmacHolder> hmacHolders) {
 		List<T> results = repositorySearchFunction.apply(hmacHolders.get(0).getValue(), hmacHolders.get(0).getValue());
@@ -39,6 +58,15 @@ public final class RotationSupportedRepositoryFunctions {
 		return results;
 	}
 
+	/**
+	 * Executes a repository search that returns an optional using two fields with up to two HMAC values each.
+	 *
+	 * @param repositorySearchFunction the repository search function
+	 * @param field1HmacHolders HMAC holders for field 1
+	 * @param field2HmacHolders HMAC holders for field 2
+	 * @param <T> result type
+	 * @return the optional result
+	 */
 	public static <T> Optional<T> executeOptionalReturningQuadFunction(QuadFunction<String, String, String, String, Optional<T>> repositorySearchFunction,
 																	   List<HmacHolder> field1HmacHolders, List<HmacHolder> field2HmacHolders) {
 		Optional<T> result = repositorySearchFunction.apply(field1HmacHolders.get(0).getValue(), field1HmacHolders.get(0).getValue(),
@@ -50,6 +78,15 @@ public final class RotationSupportedRepositoryFunctions {
 		return result;
 	}
 
+	/**
+	 * Executes a repository search that returns a list using two fields with up to two HMAC values each.
+	 *
+	 * @param repositorySearchFunction the repository search function
+	 * @param field1HmacHolders HMAC holders for field 1
+	 * @param field2HmacHolders HMAC holders for field 2
+	 * @param <T> result type
+	 * @return the results list
+	 */
 	public static <T> List<T> executeListReturningQuadFunction(QuadFunction<String, String, String, String, List<T>> repositorySearchFunction,
 															   List<HmacHolder> field1HmacHolders, List<HmacHolder> field2HmacHolders) {
 		List<T> results = repositorySearchFunction.apply(field1HmacHolders.get(0).getValue(), field1HmacHolders.get(0).getValue(),
@@ -62,6 +99,15 @@ public final class RotationSupportedRepositoryFunctions {
 	}
 
 	public interface QuadFunction<P1, P2, P3, P4, R> {
+		/**
+		 * Applies the function to the supplied values.
+		 *
+		 * @param value1 the first value
+		 * @param value2 the second value
+		 * @param value3 the third value
+		 * @param value4 the fourth value
+		 * @return the result
+		 */
 		R apply(P1 value1, P2 value2, P3 value3, P4 value4);
 	}
 }

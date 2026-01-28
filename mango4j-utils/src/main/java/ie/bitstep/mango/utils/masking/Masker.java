@@ -5,5 +5,11 @@ package ie.bitstep.mango.utils.masking;
  */
 @FunctionalInterface
 public interface Masker {
+	/**
+	 * Masks the supplied value.
+	 *
+	 * @param value the input value
+	 * @return the masked value
+	 */
 	String mask(String value);
 }

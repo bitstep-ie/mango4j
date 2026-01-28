@@ -26,25 +26,49 @@ public class ObjectMutator {
 	private final Deque<Object> visited = new ArrayDeque<>();
 	private final ProxyResolver proxyResolver;
 
+	/**
+	 * Creates a mutator with a custom proxy resolver.
+	 *
+	 * @param proxyResolver the proxy resolver to use
+	 */
 	public ObjectMutator(ProxyResolver proxyResolver) {
 		this.proxyResolver = proxyResolver;
 		deep = true;
 	}
 
+	/**
+	 * Creates a mutator using an identity proxy resolver.
+	 */
 	public ObjectMutator() {
 		this(new IdentityProxyResolver());
 	}
 
+	/**
+	 * Enables deep mutation of nested objects.
+	 *
+	 * @return this mutator
+	 */
 	public ObjectMutator deep() {
 		deep = true;
 		return this;
 	}
 
+	/**
+	 * Disables deep mutation and only processes direct fields.
+	 *
+	 * @return this mutator
+	 */
 	public ObjectMutator shallow() {
 		deep = false;
 		return this;
 	}
 
+	/**
+	 * Mutates all eligible fields on the supplied object.
+	 *
+	 * @param object the object to mutate
+	 * @throws MutatorException when mutation fails
+	 */
 	public void mutate(Object object) throws MutatorException {
 		visited.push(object);
 		for (Field field : getAllDeclaredFields(object.getClass())) {
@@ -52,10 +76,23 @@ public class ObjectMutator {
 		}
 	}
 
+	/**
+	 * Returns all declared fields from a class hierarchy.
+	 *
+	 * @param clazz the class to inspect
+	 * @return the list of fields
+	 */
 	private List<Field> getAllDeclaredFields(Class<?> clazz) {
 		return getAllDeclaredFields(clazz, new ArrayList<>());
 	}
 
+	/**
+	 * Recursively collects declared fields up the class hierarchy.
+	 *
+	 * @param clazz the class to inspect
+	 * @param fields the accumulator list
+	 * @return the list of fields
+	 */
 	private List<Field> getAllDeclaredFields(Class<?> clazz, List<Field> fields) {
 		if (clazz.getSuperclass() != null) {
 			fields.addAll(List.of(clazz.getDeclaredFields()));
@@ -65,6 +102,13 @@ public class ObjectMutator {
 		return fields;
 	}
 
+	/**
+	 * Mutates a specific field on the supplied object.
+	 *
+	 * @param object the target object
+	 * @param field the field to mutate
+	 * @throws MutatorException when mutation fails
+	 */
 	public void mutate(Object object, Field field) throws MutatorException {
 		if (!field.isSynthetic() && !Modifier.isFinal(field.getModifiers())) {
 			try {
@@ -80,6 +124,14 @@ public class ObjectMutator {
 		}
 	}
 
+	/**
+	 * Mutates a field value, avoiding cycles via the visited stack.
+	 *
+	 * @param object the target object
+	 * @param field the field being mutated
+	 * @param value the current field value
+	 * @throws MutatorException when mutation fails
+	 */
 	private void mutateValue(Object object, Field field, Object value) throws MutatorException {
 		if (!visited.contains(value)) {
 			visited.push(value);
@@ -92,16 +144,36 @@ public class ObjectMutator {
 		}
 	}
 
+	/**
+	 * Registers a mutator for the supplied annotation type.
+	 *
+	 * @param annotation the annotation type
+	 * @param processor the mutator to apply
+	 * @return this mutator
+	 */
 	public ObjectMutator on(Class<?> annotation, ValueMutator processor) {
 		processors.computeIfAbsent(annotation, k -> newAnnotationProcessors()).add(processor);
 
 		return this;
 	}
 
+	/**
+	 * Creates a new list of annotation processors.
+	 *
+	 * @return a new list instance
+	 */
 	private List<ValueMutator> newAnnotationProcessors() {
 		return new ArrayList<>();
 	}
 
+	/**
+	 * Mutates a non-primitive field value.
+	 *
+	 * @param object the target object
+	 * @param field the field being mutated
+	 * @param value the current field value
+	 * @throws MutatorException when mutation fails
+	 */
 	void mutateObject(Object object, Field field, Object value) throws MutatorException {
 		if (deep) {
 			value = proxyResolver.resolve(value);
@@ -120,6 +192,14 @@ public class ObjectMutator {
 		}
 	}
 
+	/**
+	 * Mutates elements in a collection, replacing values when mutated.
+	 *
+	 * @param object the target object
+	 * @param field the field being mutated
+	 * @param collection the collection to mutate
+	 * @throws MutatorException when mutation fails
+	 */
 	private void mutateCollection(Object object, Field field, Collection<Object> collection) throws MutatorException {
 		ArrayList<Object> tmp = new ArrayList<>();
 
@@ -137,6 +217,14 @@ public class ObjectMutator {
 		}
 	}
 
+	/**
+	 * Mutates values in a map, replacing values when mutated.
+	 *
+	 * @param object the target object
+	 * @param field the field being mutated
+	 * @param map the map to mutate
+	 * @throws MutatorException when mutation fails
+	 */
 	private void mutateMap(Object object, Field field, Map<Object, Object> map) throws MutatorException {
 		for (Map.Entry<Object, Object> v : map.entrySet()) {
 			Object result = mutateEntry(object, field, v.getValue());
@@ -147,6 +235,15 @@ public class ObjectMutator {
 		}
 	}
 
+	/**
+	 * Mutates a single entry value.
+	 *
+	 * @param object the target object
+	 * @param field the field being mutated
+	 * @param value the entry value
+	 * @return the possibly mutated value
+	 * @throws MutatorException when mutation fails
+	 */
 	private Object mutateEntry(Object object, Field field, Object value) throws MutatorException {
 		if (value != null) {
 			if (isPrimitive(field, value)) {
@@ -159,6 +256,13 @@ public class ObjectMutator {
 		return value;
 	}
 
+	/**
+	 * Mutates a primitive field value in-place on the object.
+	 *
+	 * @param object the target object
+	 * @param field the field being mutated
+	 * @param value the current field value
+	 */
 	private void mutatePrimitive(Object object, Field field, Object value) {
 		Object result = value;
 
@@ -173,6 +277,13 @@ public class ObjectMutator {
 		}
 	}
 
+	/**
+	 * Applies registered mutators for annotations on the field.
+	 *
+	 * @param field the field being mutated
+	 * @param value the current value
+	 * @return the mutated value
+	 */
 	private Object processPrimitive(Field field, Object value) {
 		Object result = value;
 

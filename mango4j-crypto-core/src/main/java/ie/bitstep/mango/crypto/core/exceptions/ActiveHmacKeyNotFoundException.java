@@ -7,6 +7,9 @@ import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
  * {@link CryptoKeyProvider CryptoKeyProvider} implementation
  */
 public class ActiveHmacKeyNotFoundException extends NonTransientCryptoException {
+	/**
+	 * Creates an exception when no active HMAC key is found.
+	 */
 	public ActiveHmacKeyNotFoundException() {
 		super("No active HMAC key was found");
 	}

@@ -7,6 +7,11 @@ import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
  * {@link CryptoKeyProvider CryptoKeyProvider} implementation
  */
 public class CryptoKeyNotFoundException extends NonTransientCryptoException {
+	/**
+	 * Creates an exception for a missing crypto key.
+	 *
+	 * @param cryptoKeyId the missing key ID
+	 */
 	public CryptoKeyNotFoundException(String cryptoKeyId) {
 		super(String.format("Crypto Key with ID '%s' not found", cryptoKeyId));
 	}

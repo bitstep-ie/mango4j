@@ -9,9 +9,17 @@ import java.lang.annotation.RetentionPolicy;
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Reduce {
-	// truncate a string to be no longer than max
+	/**
+	 * Truncates a string to be no longer than max.
+	 *
+	 * @return the maximum length
+	 */
 	int max();
 
-	// use ellipsis to indicate truncation
+	/**
+	 * Uses ellipsis to indicate truncation.
+	 *
+	 * @return true to append ellipsis
+	 */
 	boolean ellipsis() default true;
 }

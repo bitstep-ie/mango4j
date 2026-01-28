@@ -26,6 +26,13 @@ public class CachedWrappedKeyHolder implements AutoCloseable {
 	Lock writeLock = lock.writeLock();
 	Lock readLock = lock.readLock();
 
+	/**
+	 * Creates a cached wrapped key holder.
+	 *
+	 * @param keyId the key ID
+	 * @param key the raw key bytes
+	 * @param persistableEncryptedKey the encrypted key container
+	 */
 	public CachedWrappedKeyHolder(
 			String keyId,
 			byte[] key,
@@ -62,6 +69,12 @@ public class CachedWrappedKeyHolder implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Compares holders by key ID.
+	 *
+	 * @param o the other object
+	 * @return true when equal
+	 */
 	public boolean equals(Object o) {
 		if (o == null || this.getClass() != o.getClass()) {
 			return false;
@@ -70,10 +83,20 @@ public class CachedWrappedKeyHolder implements AutoCloseable {
 		return this == o || this.keyId.equals(((CachedWrappedKeyHolder) o).keyId());
 	}
 
+	/**
+	 * Returns the hash code for this holder.
+	 *
+	 * @return the hash code
+	 */
 	public int hashCode() {
 		return keyId.hashCode();
 	}
 
+	/**
+	 * Returns a string representation of this holder.
+	 *
+	 * @return the string representation
+	 */
 	public String toString() {
 		return "WrappedKeyHolder(KeyId: " + keyId + ")";
 	}
@@ -107,10 +130,20 @@ public class CachedWrappedKeyHolder implements AutoCloseable {
 		}
 	}
 
+	/**
+	 * Returns the key ID.
+	 *
+	 * @return the key ID
+	 */
 	public String keyId() {
 		return keyId;
 	}
 
+	/**
+	 * Returns the persistable encrypted key container.
+	 *
+	 * @return the encrypted key container
+	 */
 	public CiphertextContainer persistableEncryptedKey() {
 		return persistableEncryptedKey;
 	}

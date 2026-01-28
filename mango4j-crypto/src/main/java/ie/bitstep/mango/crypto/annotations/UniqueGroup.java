@@ -51,5 +51,10 @@ public @interface UniqueGroup {
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})
 @interface UniqueGroups {
+	/**
+	 * Container annotation for repeatable {@link UniqueGroup}.
+	 *
+	 * @return the contained annotations
+	 */
 	UniqueGroup[] value();
 }

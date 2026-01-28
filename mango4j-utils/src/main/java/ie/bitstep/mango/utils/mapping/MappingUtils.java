@@ -13,6 +13,9 @@ public class MappingUtils {
 	public static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<>() {
 	};
 
+	/**
+	 * Prevents instantiation.
+	 */
 	private MappingUtils() {
 		// NOSONAR
 	}

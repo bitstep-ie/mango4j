@@ -69,6 +69,15 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 	private final CryptoKeyProvider cryptoKeyProvider;
 	private final CiphertextFormatter ciphertextFormatter;
 
+	/**
+	 * Creates a cached wrapped key encryption service with custom cache settings.
+	 *
+	 * @param entryTTL the entry TTL
+	 * @param currentEntryTTL the current entry TTL
+	 * @param cacheGracePeriod grace period before destruction
+	 * @param cryptoKeyProvider the key provider
+	 * @param ciphertextFormatter the ciphertext formatter
+	 */
 	@SuppressWarnings("java:S3010")
 	public CachedWrappedKeyEncryptionService(
 			Duration entryTTL,
@@ -83,6 +92,12 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE.setCacheGracePeriod(cacheGracePeriod);
 	}
 
+	/**
+	 * Creates a cached wrapped key encryption service with default cache settings.
+	 *
+	 * @param cryptoKeyProvider the key provider
+	 * @param ciphertextFormatter the ciphertext formatter
+	 */
 	public CachedWrappedKeyEncryptionService(CryptoKeyProvider cryptoKeyProvider, CiphertextFormatter ciphertextFormatter) {
 		this(
 				CACHED_KEYS_TTL,
@@ -93,6 +108,13 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		);
 	}
 
+	/**
+	 * Encrypts payload using a cached wrapped data encryption key.
+	 *
+	 * @param cryptoKey the crypto key
+	 * @param payload the plaintext payload
+	 * @return the ciphertext container
+	 */
 	@Override
 	public CiphertextContainer encrypt(final CryptoKey cryptoKey, final String payload) {
 		try {
@@ -135,6 +157,12 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		}
 	}
 
+	/**
+	 * Destroys the generated key material.
+	 *
+	 * @param dek the secret key
+	 * @param keyBytes the key bytes to wipe
+	 */
 	private static void destroyKey(SecretKey dek, byte[] keyBytes) {
 		try {
 			dek.destroy();
@@ -146,10 +174,21 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		destroyKeyBytes(keyBytes);
 	}
 
+	/**
+	 * Overwrites key bytes in memory.
+	 *
+	 * @param keyBytes the key bytes to wipe
+	 */
 	private static void destroyKeyBytes(byte[] keyBytes) {
 		Arrays.fill(keyBytes, (byte) 0);
 	}
 
+	/**
+	 * Returns the current cached wrapped key holder.
+	 *
+	 * @param cep the crypto key configuration
+	 * @return the cached key holder
+	 */
 	private CachedWrappedKeyHolder getCurrentWrappedKeyHolder(CryptoKeyConfiguration cep) {
 		synchronized (CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE) {
 			CachedWrappedKeyHolder cachedWrappedKeyHolder = CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE.getCurrent();
@@ -161,6 +200,12 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		}
 	}
 
+	/**
+	 * Creates and caches a new wrapped key holder.
+	 *
+	 * @param cep the crypto key configuration
+	 * @return the new cached holder
+	 */
 	private CachedWrappedKeyHolder newCachedWrappedKeyHolder(CryptoKeyConfiguration cep) {
 // Current key not set or expired, create a new one and set as current
 		final var keyId = UUID.randomUUID().toString();
@@ -177,10 +222,22 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		return cachedWrappedKeyHolder;
 	}
 
+	/**
+	 * Returns the wrapping key for a key ID.
+	 *
+	 * @param cryptoKeyId the wrapping key ID
+	 * @return the crypto key
+	 */
 	private CryptoKey getWrappingKey(String cryptoKeyId) {
 		return cryptoKeyProvider.getById(cryptoKeyId);
 	}
 
+	/**
+	 * Decrypts ciphertext using a cached wrapped data encryption key.
+	 *
+	 * @param ciphertextContainer the ciphertext container
+	 * @return the decrypted plaintext
+	 */
 	@Override
 	public String decrypt(final CiphertextContainer ciphertextContainer) {
 		try {
@@ -219,6 +276,13 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		}
 	}
 
+	/**
+	 * Returns a wrapped key holder for a ciphertext container.
+	 *
+	 * @param ciphertextContainer the ciphertext container
+	 * @param edc the encrypted data config
+	 * @return the cached key holder
+	 */
 	private CachedWrappedKeyHolder getWrappedKeyHolder(CiphertextContainer ciphertextContainer, EncryptedDataConfig edc) {
 		synchronized (CACHED_WRAPPED_KEY_HOLDER_CONCURRENT_CACHE) {
 			final String keyid = ciphertextContainer.getData().get(DATA_ENCRYPTION_KEY_ID).toString();
@@ -242,16 +306,33 @@ public class CachedWrappedKeyEncryptionService extends EncryptionServiceDelegate
 		}
 	}
 
+	/**
+	 * HMAC is not supported by this implementation.
+	 *
+	 * @param list the HMAC holders
+	 */
 	@Override
 	public void hmac(final Collection<HmacHolder> list) {
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * Returns the supported crypto key type.
+	 *
+	 * @return the key type name
+	 */
 	@Override
 	public String supportedCryptoKeyType() {
 		return WrappedCryptoKeyTypes.CACHED_WRAPPED.getName();
 	}
 
+	/**
+	 * Generates a data encryption key from cached key bytes.
+	 *
+	 * @param key the key bytes
+	 * @param cipherConfig the cipher config
+	 * @return the secret key
+	 */
 	private static SecretKey generateDataEncryptionKey(final byte[] key, final CipherConfig cipherConfig) {
 		return new SecretKeySpec(key, cipherConfig.algorithm().getAlgorithm());
 	}

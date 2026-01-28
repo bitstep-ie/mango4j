@@ -13,14 +13,34 @@ import java.util.Map;
 public class MapBuilder<K, V> {
 	private final Map<K, V> m;
 
+	/**
+	 * Creates a builder backed by the supplied map implementation.
+	 *
+	 * @param map the map instance to populate
+	 */
 	public MapBuilder(Map<K, V> map) {
 		m = map;
 	}
 
+	/**
+	 * Creates a builder backed by a {@link LinkedHashMap}.
+	 *
+	 * @param <K> the key type
+	 * @param <V> the value type
+	 * @return a new builder
+	 */
 	public static <K, V> MapBuilder<K, V> map() {
 		return new MapBuilder<>(new LinkedHashMap<>());
 	}
 
+	/**
+	 * Creates a builder backed by the supplied map implementation.
+	 *
+	 * @param implementation the map instance to populate
+	 * @param <K> the key type
+	 * @param <V> the value type
+	 * @return a new builder
+	 */
 	public static <K, V> MapBuilder<K, V> map(Map<K, V> implementation) {
 		return new MapBuilder<>(implementation);
 	}
@@ -185,6 +205,11 @@ public class MapBuilder<K, V> {
 		return this;
 	}
 
+	/**
+	 * Returns the built map.
+	 *
+	 * @return the underlying map
+	 */
 	public Map<K, V> build() {
 		return m;
 	}

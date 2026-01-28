@@ -5,4 +5,7 @@ import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Text {
+	/**
+	 * Marker annotation for text fields.
+	 */
 }

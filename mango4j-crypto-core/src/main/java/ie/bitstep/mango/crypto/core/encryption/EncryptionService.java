@@ -20,17 +20,37 @@ public final class EncryptionService {
 	private final CiphertextFormatter ciphertextFormatter;
 	private final ObjectMapperFactory objectMapperFactory;
 
+	/**
+	 * Creates a service with delegates and a key provider.
+	 *
+	 * @param encryptionServiceDelegates delegate implementations
+	 * @param cryptoKeyProvider key provider for lookup
+	 */
 	public EncryptionService(Collection<EncryptionServiceDelegate> encryptionServiceDelegates,
 							 CryptoKeyProvider cryptoKeyProvider) {
 		this(encryptionServiceDelegates, cryptoKeyProvider, new ConfigurableObjectMapperFactory());
 	}
 
+	/**
+	 * Creates a service with delegates, key provider, and mapper factory.
+	 *
+	 * @param encryptionServiceDelegates delegate implementations
+	 * @param cryptoKeyProvider key provider for lookup
+	 * @param objectMapperFactory mapper factory
+	 */
 	public EncryptionService(Collection<EncryptionServiceDelegate> encryptionServiceDelegates,
 							 CryptoKeyProvider cryptoKeyProvider,
 							 ObjectMapperFactory objectMapperFactory) {
 		this(encryptionServiceDelegates, new CiphertextFormatter(cryptoKeyProvider, objectMapperFactory), objectMapperFactory);
 	}
 
+	/**
+	 * Creates a service with delegates, ciphertext formatter, and mapper factory.
+	 *
+	 * @param encryptionServiceDelegates delegate implementations
+	 * @param ciphertextFormatter ciphertext formatter
+	 * @param objectMapperFactory mapper factory
+	 */
 	public EncryptionService(Collection<EncryptionServiceDelegate> encryptionServiceDelegates,
 							 CiphertextFormatter ciphertextFormatter,
 							 ObjectMapperFactory objectMapperFactory) {
@@ -42,6 +62,12 @@ public final class EncryptionService {
 		});
 	}
 
+	/**
+	 * Returns the delegate that supports the supplied key.
+	 *
+	 * @param cryptoKey the crypto key
+	 * @return the matching delegate
+	 */
 	private EncryptionServiceDelegate getInstance(CryptoKey cryptoKey) {
 		EncryptionServiceDelegate result;
 		if (cryptoKey.getType() == null || (result = encryptionServiceDelegates.get(cryptoKey.getType())) == null) {
@@ -115,6 +141,11 @@ public final class EncryptionService {
 			.forEach(EncryptionServiceDelegate::hmac);
 	}
 
+	/**
+	 * Returns the ObjectMapperFactory used by this service.
+	 *
+	 * @return the mapper factory
+	 */
 	public ObjectMapperFactory getObjectMapperFactory() {
 		return objectMapperFactory;
 	}

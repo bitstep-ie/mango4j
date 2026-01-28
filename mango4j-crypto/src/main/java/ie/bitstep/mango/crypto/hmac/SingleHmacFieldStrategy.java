@@ -55,11 +55,22 @@ public class SingleHmacFieldStrategy implements HmacStrategy {
 	private final Map<Field, Field> entityHmacFields = new HashMap<>();
 	private final HmacStrategyHelper hmacStrategyHelper;
 
+	/**
+	 * Creates a single-HMAC strategy for the supplied entity class.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 * @param hmacStrategyHelper   helper used to compute HMACs
+	 */
 	public SingleHmacFieldStrategy(Class<?> annotatedEntityClass, HmacStrategyHelper hmacStrategyHelper) {
 		this.hmacStrategyHelper = hmacStrategyHelper;
 		this.register(annotatedEntityClass);
 	}
 
+	/**
+	 * Registers source and target HMAC fields for the entity class.
+	 *
+	 * @param annotatedEntityClass the entity class to inspect
+	 */
 	private void register(Class<?> annotatedEntityClass) {
 		List<Field> allFields = List.of(annotatedEntityClass.getDeclaredFields());
 		List<Field> hmacSourceFields = ReflectionUtils.getFieldsByAnnotation(annotatedEntityClass, Hmac.class);
@@ -78,6 +89,11 @@ public class SingleHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Calculates HMAC values for all configured fields and sets the target HMAC fields.
+	 *
+	 * @param entity the entity to process
+	 */
 	@Override
 	public void hmac(Object entity) {
 		try {
@@ -102,6 +118,11 @@ public class SingleHmacFieldStrategy implements HmacStrategy {
 		}
 	}
 
+	/**
+	 * Resolves the HMAC key to use from the current key list.
+	 *
+	 * @return the selected HMAC key
+	 */
 	private CryptoKey getHmacKeyToUse() {
 		CryptoKey cryptoKeyToUse;
 		List<CryptoKey> currentHmacKeys = hmacStrategyHelper.cryptoKeyProvider().getCurrentHmacKeys();
@@ -112,6 +133,12 @@ public class SingleHmacFieldStrategy implements HmacStrategy {
 		return cryptoKeyToUse;
 	}
 
+	/**
+	 * Picks the HMAC key to use from the supplied list.
+	 *
+	 * @param currentHmacKeys the current HMAC keys
+	 * @return the selected HMAC key
+	 */
 	protected CryptoKey getHmacKeyToUse(List<CryptoKey> currentHmacKeys) {
 		return currentHmacKeys.get(0);
 	}

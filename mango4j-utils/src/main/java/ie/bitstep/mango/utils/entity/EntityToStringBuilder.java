@@ -19,19 +19,44 @@ import java.util.Date;
  */
 public class EntityToStringBuilder extends ReflectionToStringBuilder {
 
+	/**
+	 * Creates a builder for the supplied object.
+	 *
+	 * @param object the target object
+	 * @param style the toString style
+	 */
 	public EntityToStringBuilder(final Object object, final ToStringStyle style) {
 		super(object, style);
 	}
 
+	/**
+	 * Builds a string representation using the default style.
+	 *
+	 * @param object the target object
+	 * @return the string representation
+	 */
 	public static String toString(final Object object) {
 		return toString(object, null);
 	}
 
+	/**
+	 * Builds a string representation using the supplied style.
+	 *
+	 * @param object the target object
+	 * @param style the toString style
+	 * @return the string representation
+	 */
 	public static String toString(final Object object, final ToStringStyle style) {
 		return new EntityToStringBuilder(object, style)
 			.toString();
 	}
 
+	/**
+	 * Accepts only safe-to-render field types for entity toString.
+	 *
+	 * @param f the field to consider
+	 * @return true if the field should be included
+	 */
 	@Override
 	protected boolean accept(Field f) {
 		Class<?> fClass = f.getType();

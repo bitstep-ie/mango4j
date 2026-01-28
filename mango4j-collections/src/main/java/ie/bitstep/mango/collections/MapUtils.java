@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class MapUtils {
+	/**
+	 * Prevents instantiation.
+	 */
 	private MapUtils() { // NOSONAR
 		// SONAR, add private constructor
 	}
@@ -90,6 +93,16 @@ public class MapUtils {
 		return (Map<K, V>) MapUtilsInternal.<K, V>immutableCopy((Map<Object, Object>) source, null, true);
 	}
 
+	/**
+	 * Adds key/value pairs to the map in order.
+	 *
+	 * @param m the map to update
+	 * @param keyValuePairs alternating key/value entries
+	 * @param <K> the key type
+	 * @param <V> the value type
+	 * @return the updated map
+	 * @throws IllegalArgumentException when the pair count is odd or the map is null
+	 */
 	public static <K, V> Map<K, V> put(Map<K, V> m, Object... keyValuePairs) {
 		if (m != null && keyValuePairs.length % 2 == 0) {
 			int index = 0;
@@ -118,6 +131,15 @@ public class MapUtils {
 		return MapUtilsInternal.getPath(m, false, Arrays.stream(path).iterator());
 	}
 
+	/**
+	 * Creates a nested path in the map, inserting missing nodes.
+	 *
+	 * @param m the map to modify
+	 * @param path the path keys
+	 * @param <K> the key type
+	 * @param <V> the value type
+	 * @return the map at the target path
+	 */
 	public static <K, V> Map<K, V> createPath(Map m, String... path) { // NOSONAR - provide parameterized type
 		return MapUtilsInternal.getPath(m, true, Arrays.stream(path).iterator());
 	}

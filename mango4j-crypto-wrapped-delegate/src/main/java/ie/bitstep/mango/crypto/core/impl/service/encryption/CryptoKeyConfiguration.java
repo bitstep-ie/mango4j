@@ -14,6 +14,17 @@ import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryp
 import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryptionConstants.KEY_ENCRYPTION_KEY;
 import static ie.bitstep.mango.crypto.core.impl.service.encryption.WrappedEncryptionConstants.KEY_SIZE;
 
+/**
+ * Configuration for key encryption parameters.
+ *
+ * @param keyEncryptionKey the wrapping key identifier or material
+ * @param keySize          the key size in bits
+ * @param ivSize           the IV size in bytes
+ * @param algorithm        the cipher algorithm
+ * @param mode             the cipher mode
+ * @param padding          the cipher padding
+ * @param gcmTagLength     the GCM tag length in bits
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record CryptoKeyConfiguration(
 	@JsonProperty(KEY_ENCRYPTION_KEY)
