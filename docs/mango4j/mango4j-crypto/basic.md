@@ -21,14 +21,18 @@ Mango4j-crypto is a framework which aims to simplify the implementation of Appli
 data at rest) in Java applications, and ensure that applications follow a flexible and powerful design that can handle
 the many tricky scenarios that can occur when implementing the same. It's based on using simple annotations to mark
 fields on your entity which the library will then generate the appropriate ciphertext for (encrypted text, HMACs or
-both)
-
-For a more detailed discussion about the mango4j-crypto initiative please read 
-[the official general documentation](../mango4j-crypto-core/basic.md) to gain a better insight into the subject.
+both). 
+This library is not an encryption provider or standard, it's a framework. Just like Springboot isn't a web 
+application, Mango4j-crypto isn't encryption. Mango4j-crypto enables you to implement Application Level Encryption in 
+your applications quickly and effectively, just like Springboot enables you to build a web application quickly 
+and effectively. It allows you to use any cryptographic approaches you need and doesn't tie you into particular 
+cryptographic provider. This will make more sense after you read the [the official general documentation](../mango4j-crypto-core/basic.md), so 
+please read that to get up to speed.
 
 The following guide is specifically aimed at showing you how to use the mango4j-crypto library in your applications.
 
-You can also check out the mango4j-crypto-example demo module in the mango4j-examples repository for a
+You can also check out the mango4j-crypto-example demo module in the 
+[mango4j-examples](https://github.com/bitstep-ie/mango4j-examples) repository for a
 working Springboot application which shows how to use this library with each HMAC strategy (explained further in this
 document).
 
