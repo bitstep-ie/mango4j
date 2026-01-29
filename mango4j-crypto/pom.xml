@@ -15,7 +15,7 @@
 
     <properties>
         <sonar.exclusions>
-            **/RekeyScheduler.java,**/RekeySchedulerInitializationException.java
+            ie/bitstep/mango/crypto/keyrotation/**
         </sonar.exclusions>
         <sonar.cpd.exclusions>**/CryptoShieldHmacHolder.java</sonar.cpd.exclusions>
     </properties>
