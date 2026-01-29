@@ -15,6 +15,7 @@ import ie.bitstep.mango.crypto.core.exceptions.ActiveEncryptionKeyNotFoundExcept
 import ie.bitstep.mango.crypto.core.exceptions.CiphertextFormatterException;
 import ie.bitstep.mango.crypto.core.exceptions.NonTransientCryptoException;
 import ie.bitstep.mango.crypto.core.exceptions.TransientCryptoException;
+import ie.bitstep.mango.crypto.core.factories.ConfigurableObjectMapperFactory;
 import ie.bitstep.mango.crypto.core.factories.ObjectMapperFactory;
 import ie.bitstep.mango.crypto.core.formatters.CiphertextFormatter;
 import ie.bitstep.mango.crypto.core.providers.CryptoKeyProvider;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
@@ -43,6 +45,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -67,6 +70,7 @@ import static ie.bitstep.mango.crypto.testdata.TestData.TEST_PAN_FIELD_NAME;
 import static ie.bitstep.mango.crypto.testdata.TestData.TEST_USERNAME;
 import static ie.bitstep.mango.crypto.testdata.TestData.TEST_USER_NAME_FIELD_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -155,6 +159,27 @@ class CryptoShieldTest {
 		assertThat((Map<String, EncryptionServiceDelegate>) getField(encryptionService, "encryptionServiceDelegates")).containsValue(mockEncryptionServiceDelegate);
 		assertThat((CiphertextFormatter) getField(encryptionService, "ciphertextFormatter")).isEqualTo(ciphertextFormatter);
 		assertThat((ObjectMapperFactory) getField(encryptionService, "objectMapperFactory")).isEqualTo(mockObjectMapperFactory);
+		assertThat(getField(cryptoShield, "retryConfiguration")).isEqualTo(mockRetryConfiguration);
+		assertThat(getField(cryptoShield, "annotatedEntityManager")).isInstanceOf(AnnotatedEntityManager.class);
+	}
+
+	@Test
+	void constructorNullObjectMapper() {
+		given(mockRetryConfiguration.poolSize()).willReturn(TEST_POOL_SIZE);
+		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), null,
+				mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), mockRetryConfiguration);
+
+		assertThat(cryptoShield).isNotNull();
+
+		assertThat(getField(cryptoShield, "objectMapper")).isInstanceOf(ObjectMapper.class);
+		assertThat(getField(cryptoShield, "cryptoKeyProvider")).isEqualTo(mockCryptoKeyProvider);
+		CiphertextFormatter ciphertextFormatter = (CiphertextFormatter) getField(cryptoShield, "ciphertextFormatter");
+		assertThat(getField(ciphertextFormatter, "objectMapperFactory")).isInstanceOf(ConfigurableObjectMapperFactory.class);
+		assertThat(getField(ciphertextFormatter, "cryptoKeyProvider")).isEqualTo(mockCryptoKeyProvider);
+		EncryptionService encryptionService = (EncryptionService) getField(cryptoShield, "encryptionService");
+		assertThat((Map<String, EncryptionServiceDelegate>) getField(encryptionService, "encryptionServiceDelegates")).containsValue(mockEncryptionServiceDelegate);
+		assertThat((CiphertextFormatter) getField(encryptionService, "ciphertextFormatter")).isEqualTo(ciphertextFormatter);
+		assertThat((ObjectMapperFactory) getField(encryptionService, "objectMapperFactory")).isInstanceOf(ConfigurableObjectMapperFactory.class);
 		assertThat(getField(cryptoShield, "retryConfiguration")).isEqualTo(mockRetryConfiguration);
 		assertThat(getField(cryptoShield, "annotatedEntityManager")).isInstanceOf(AnnotatedEntityManager.class);
 	}
@@ -732,6 +757,26 @@ class CryptoShieldTest {
 		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor.cryptoKeyProvider()).isEqualTo(mockCryptoKeyProvider);
 		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor.encryptionService()).isInstanceOf(EncryptionService.class);
 		assertThat(MockHmacStrategyImpl.entityPassedToHmac).isEqualTo(testEntity);
+
+		then(mockedObjectMapper).shouldHaveNoInteractions();
+		then(mockCiphertextFormatter).shouldHaveNoInteractions();
+	}
+
+	@Test
+	void encryptNoCurrentEncryptionKeyButRekeyCryptoShieldDelegate() {
+		given(mockObjectMapperFactory.objectMapper()).willReturn(mockedObjectMapper);
+		CryptoShieldDelegate mockCryptoShieldDelegate = Mockito.mock(CryptoShieldDelegate.class);
+		given(mockCryptoShieldDelegate.getCurrentEncryptionKey()).willReturn(null);
+		given(mockCryptoShieldDelegate.getHmacStrategy(testEntity)).willReturn(Optional.of(new MockHmacStrategyImpl(null, null)));
+
+		cryptoShield = new CryptoShield(List.of(TestMockHmacEntity.class), mockObjectMapperFactory, mockCryptoKeyProvider, List.of(mockEncryptionServiceDelegate), null);
+		assertThatNoException().isThrownBy(() -> cryptoShield.encrypt(testEntity, mockCryptoShieldDelegate));
+
+		assertThat(MockHmacStrategyImpl.entityPassedToHmac).isEqualTo(testEntity);
+		assertThat(MockHmacStrategyImpl.annotatedEntityClassPassedToConstructor).isEqualTo(TestMockHmacEntity.class);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor).isInstanceOf(HmacStrategyHelper.class);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor.cryptoKeyProvider()).isEqualTo(mockCryptoKeyProvider);
+		assertThat(MockHmacStrategyImpl.hmacStrategyHelperPassedToConstructor.encryptionService()).isInstanceOf(EncryptionService.class);
 
 		then(mockedObjectMapper).shouldHaveNoInteractions();
 		then(mockCiphertextFormatter).shouldHaveNoInteractions();

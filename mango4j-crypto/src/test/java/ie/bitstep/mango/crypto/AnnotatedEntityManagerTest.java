@@ -3,6 +3,7 @@ package ie.bitstep.mango.crypto;
 import ie.bitstep.mango.crypto.annotations.EncryptionKeyId;
 import ie.bitstep.mango.crypto.core.exceptions.NonTransientCryptoException;
 import ie.bitstep.mango.crypto.hmac.DoubleHmacFieldStrategy;
+import ie.bitstep.mango.crypto.hmac.SingleHmacFieldStrategy;
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.TestMockHmacEntity;
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.TestMockHmacEntityWithNoEncryptFields;
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.cascade.TestEntityWithBothEncryptHmacAndCascadeEncryptFields;
@@ -30,6 +31,7 @@ import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.doublehmacstrate
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.doublehmacstrategy.TestAnnotatedEntityForDoubleHmacFieldStrategyMultipleEncryptionKeyIdAnnotations;
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.doublehmacstrategy.TestAnnotatedEntityForDoubleHmacFieldStrategyNoEncryptionKeyIdAnnotation;
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.doublehmacstrategy.TestAnnotatedEntityTopLevelHmacFieldStrategyAnnotation;
+import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.single.TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField;
 import ie.bitstep.mango.crypto.testdata.implementations.hmacstrategies.MockHmacStrategyImpl;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,7 +78,7 @@ class AnnotatedEntityManagerTest {
 		assertThat(annotatedEntityManager.getEncryptionKeyIdField(TestAnnotatedEntityForDoubleHmacFieldStrategy.class))
 				.isNotEmpty();
 
-// Make sure all fields are settable
+		// Make sure all fields are settable
 		for (Field field : annotatedEntityManager.getFieldsToEncrypt(TestAnnotatedEntityForDoubleHmacFieldStrategy.class)) {
 			field.set(entity, TEST_PAN_FIELD_NAME);
 		}
@@ -89,6 +91,44 @@ class AnnotatedEntityManagerTest {
 		assertThat(annotatedEntityManager.getAllConfidentialFields(TestAnnotatedEntityForDoubleHmacFieldStrategy.class))
 				.filteredOn(field -> field.getName().equals(TEST_USER_NAME_FIELD_NAME)).isNotEmpty();
 		assertThat(annotatedEntityManager.getAllConfidentialFields(TestAnnotatedEntityForDoubleHmacFieldStrategy.class))
+				.filteredOn(field -> field.getName().equals(TEST_ETHNICITY_FIELD_NAME)).isNotEmpty();
+	}
+
+	@SuppressWarnings("OptionalGetWithoutIsPresent")
+	@Test
+	@DisplayName("Constructor test for @EncryptedData annotation instead of deprecated @EncryptedBlob")
+	void constructorEncryptedDataAnnotation() throws NoSuchFieldException, IllegalAccessException {
+		Field encryptedDataField = TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class.getDeclaredField(TEST_ENCRYPTED_DATA_FIELD_NAME);
+		TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField entity = new TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField();
+		TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class.getDeclaredField(TEST_PAN_FIELD_NAME).setAccessible(false);
+
+		AnnotatedEntityManager annotatedEntityManager = new AnnotatedEntityManager(
+				List.of(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class), mockHmacStrategyHelper);
+
+		assertThat(annotatedEntityManager.getEncryptedDataField(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class))
+				.isEqualTo(encryptedDataField);
+		assertThat(annotatedEntityManager.getFieldsToEncrypt(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class))
+				.filteredOn(field -> field.getName().equals(TEST_PAN_FIELD_NAME)).isNotEmpty();
+		assertThat(annotatedEntityManager.getFieldsToEncrypt(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class))
+				.filteredOn(field -> field.getName().equals(TEST_USER_NAME_FIELD_NAME)).isNotEmpty();
+		assertThat(annotatedEntityManager.getFieldsToEncrypt(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class))
+				.filteredOn(field -> field.getName().equals(TEST_ETHNICITY_FIELD_NAME)).isNotEmpty();
+		assertThat(annotatedEntityManager.getEncryptionKeyIdField(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class))
+				.isNotEmpty();
+
+		// Make sure all fields are settable
+		for (Field field : annotatedEntityManager.getFieldsToEncrypt(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class)) {
+			field.set(entity, TEST_PAN_FIELD_NAME);
+		}
+
+		assertThat(annotatedEntityManager.getHmacStrategy(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class).get())
+				.isInstanceOf(SingleHmacFieldStrategy.class);
+
+		assertThat(annotatedEntityManager.getAllConfidentialFields(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class))
+				.filteredOn(field -> field.getName().equals(TEST_PAN_FIELD_NAME)).isNotEmpty();
+		assertThat(annotatedEntityManager.getAllConfidentialFields(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class))
+				.filteredOn(field -> field.getName().equals(TEST_USER_NAME_FIELD_NAME)).isNotEmpty();
+		assertThat(annotatedEntityManager.getAllConfidentialFields(TestAnnotatedEntityForSingleHmacFieldStrategyEncryptedDataField.class))
 				.filteredOn(field -> field.getName().equals(TEST_ETHNICITY_FIELD_NAME)).isNotEmpty();
 	}
 
