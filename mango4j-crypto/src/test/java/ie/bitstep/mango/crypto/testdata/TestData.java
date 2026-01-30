@@ -62,6 +62,7 @@ public class TestData {
 		testCryptoKey.setId(TEST_CRYPTO_KEY_ID);
 		testCryptoKey.setType(MOCK_TEST_KEY_TYPE);
 		testCryptoKey.setKeyStartTime(Instant.now().minus(Duration.ofDays(1)));
+		testCryptoKey.setCreatedDate(Instant.now());
 		return testCryptoKey;
 	}
 }

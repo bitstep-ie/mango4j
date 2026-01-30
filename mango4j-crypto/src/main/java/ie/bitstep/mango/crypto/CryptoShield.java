@@ -308,6 +308,14 @@ public class CryptoShield {
 		return generateHmacs(sourceValue, null);
 	}
 
+	/**
+	 * Method to generate HMACs for a given source value using all current HMAC keys. This method is useful
+	 * for applications that need to generate HMACs for values outside the context of an annotated entity,
+	 * usually for search operations.
+	 * @param sourceValue The source value to HMAC
+	 * @param name An optional name/alias for the HMAC (can be null)
+	 * @return A collection of {@link HmacHolder} objects containing the resulting HMACs
+	 */
 	public Collection<HmacHolder> generateHmacs(String sourceValue, String name) {
 		List<HmacHolder> hmacHolders = cryptoKeyProvider.getCurrentHmacKeys().stream()
 				.map(cryptoKey -> new HmacHolder(cryptoKey, sourceValue, name))
