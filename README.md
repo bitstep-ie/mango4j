@@ -43,11 +43,6 @@
 
 Comprised of the following modules:
 - mango4j-collections
-- mango4j-crypto
-- mango4j-crypto-core
-- mango4j-crypto-nonprod-delegates
-- mango4j-crypto-wrapped-delegates
-- mango4j-crypto-core
 - mango4j-reflection
 - mango4j-utils
 - mango4j-validation

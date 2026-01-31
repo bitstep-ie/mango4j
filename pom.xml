@@ -12,15 +12,11 @@
         <module>mango4j-validation</module>
         <module>mango4j-collections</module>
         <module>mango4j-reflection</module>
-        <module>mango4j-crypto-core</module>
-        <module>mango4j-crypto</module>
-        <module>mango4j-crypto-nonprod-delegates</module>
-        <module>mango4j-crypto-wrapped-delegate</module>
     </modules>
 
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j</artifactId>
-    <version>2.12.0-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
 
     <properties>
         <java.version>17</java.version>
