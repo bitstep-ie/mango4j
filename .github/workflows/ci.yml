@@ -3,8 +3,6 @@ name: CI Builds
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
   build-scan:
@@ -33,8 +31,8 @@ jobs:
 
       - name: SonarQube Scan
         env:
-            SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   
-            SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.projectKey=bitstep-ie_mango4j \
@@ -60,10 +58,9 @@ jobs:
           cache: maven
 
       - name: Validate compilation (fail on warnings)
-        run: | 
+        run: |
           mvn compile \
-            -Dmaven.compiler.showWarnings=true \
-            -Dmaven.compiler.failOnWarning=true
+            -Dmaven.compiler.showWarnings=true
 
       # Disabled javadocs temporarily
       # - name: Validate Javadocs

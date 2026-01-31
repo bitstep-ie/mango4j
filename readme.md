@@ -1,22 +1,54 @@
 # mango4j
 
-[![Quality Gate Status](TBD](TBD)
-[![Reliability Rating](TBD)](TBD)
-[![Vulnerabilities](TBD)](TBD)
-[![Coverage](TBD)](TBD)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=bitstep-ie_mango4j&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=bitstep-ie_mango4j)
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=bitstep-ie_mango4j&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=bitstep-ie_mango4j)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=bitstep-ie_mango4j&metric=coverage)](https://sonarcloud.io/summary/new_code?id=bitstep-ie_mango4j)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=bitstep-ie_mango4j&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=bitstep-ie_mango4j)
 
 
-## Module index
-- [mango4j-collections](mango4j-collections/readme.md) - collection builders, map utilities, reconciliation, and caching.
-- [mango4j-utils](mango4j-utils/readme.md) - general utilities (conformance, masking, dates, URLs, mapping, threading).
-- [mango4j-reflection](mango4j-reflection/readme.md) - cached reflection metadata and property accessors.
-- [mango4j-validation](mango4j-validation/readme.md) - Jakarta validation helpers and reusable constraints.
-- [mango4j-hibernate-proxy-resolver](mango4j-hibernate-proxy-resolver/readme.md) - Hibernate proxy resolver for mutators.
-- [mango4j-crypto-core](mango4j-crypto-core/readme.md) - core crypto abstractions and services.
-- [mango4j-crypto](mango4j-crypto/readme.md) - annotation-driven encryption and HMAC for entities.
-- [mango4j-crypto-nonprod-delegates](mango4j-crypto-nonprod-delegates/readme.md) - non-production encryption delegates.
-- [mango4j-crypto-wrapped-delegate](mango4j-crypto-wrapped-delegate/readme.md) - wrapped key encryption delegates.
+[![CI](https://github.com/bitstep-ie/mango4j/actions/workflows/ci.yml/badge.svg)](https://github.com/bitstep-ie/mango4j/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/bitstep-ie/mango4j/actions/workflows/codeql.yml/badge.svg)](https://github.com/bitstep-ie/mango4j/actions/workflows/codeql.yml)
+[![Dependabot](https://github.com/bitstep-ie/mango4j/actions/workflows/dependabot/dependabot-updates/badge.svg)](https://github.com/bitstep-ie/mango4j/actions/workflows/dependabot/dependabot-updates)
 
-## Documentation
 
-Current documentation is published [here](TBD). Individual release documentation is published [here](TBD).
+<br />
+<div align="center">
+    <a href="https://github.com/bitstep-ie/mango4j">
+    <picture>
+        <source srcset="docs/assets/mango-with-text-black.png" media="(prefers-color-scheme: light)">
+        <source srcset="docs/assets/mango-with-text-white.png" media="(prefers-color-scheme: dark)">
+        <img src="docs/assets/mango-with-text-black.png" alt="mango Logo">
+    </picture>
+    </a>
+    <h3 align="center">mango-go</h3>
+    <p align="center">
+        A collection of utility packages for java
+        <br />
+        <a href="#"><strong>📚 Explore the docs »</strong></a>
+        <br />
+        <br />
+        <a href="#">🔎 View Examples</a>
+        &middot;
+        <a href="#">
+            🐛 Report Bug
+        </a>
+        &middot;
+        <a href="#">
+            💡 Request Feature
+        </a>
+    </p>
+</div>
+<br />
+
+
+Comprised of the following modules:
+- mango4j-collections
+- mango4j-crypto
+- mango4j-crypto-core
+- mango4j-crypto-nonprod-delegates
+- mango4j-crypto-wrapped-delegates
+- mango4j-crypto-core
+- mango4j-reflection
+- mango4j-utils
+- mango4j-validation
+- mango4j-hibernate-proxy-resolver

@@ -12,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,18 +39,17 @@ class RekeyCryptoShieldTest {
 
 	@BeforeEach
 	void setup() {
-		rekeyCryptoShield = new RekeyCryptoShield(mockCryptoShield, mockEncryptionKey, List.of(mockEncryptionKey));
+		rekeyCryptoShield = new RekeyCryptoShield(mockCryptoShield, mockEncryptionKey, mockEncryptionKey);
 		testEntity = new TestMockHmacEntity();
 	}
 
-	@SuppressWarnings("OptionalGetWithoutIsPresent")
 	@Test
 	void constructorNonListHmacStrategy() {
 		given(mockCryptoShield.getHmacStrategy(testEntity)).willReturn(Optional.of(mockHmacStrategy));
 		CryptoShieldDelegate cryptoShieldDelegate = getRekeyCryptoShieldDelegate();
 
 		assertThat(cryptoShieldDelegate.getCurrentEncryptionKey()).isEqualTo(mockEncryptionKey);
-		assertThat(cryptoShieldDelegate.getHmacStrategy(testEntity)).contains(mockHmacStrategy);
+		assertThat(cryptoShieldDelegate.getHmacStrategy(testEntity)).isEmpty();
 	}
 
 	@SuppressWarnings("OptionalGetWithoutIsPresent")
@@ -65,6 +63,16 @@ class RekeyCryptoShieldTest {
 	}
 
 	@Test
+	void constructorListHmacStrategyButNoHMACKey() {
+		rekeyCryptoShield = new RekeyCryptoShield(mockCryptoShield, mockEncryptionKey, null);
+		given(mockCryptoShield.getHmacStrategy(testEntity)).willReturn(Optional.of(mockListHmacFieldStrategy));
+		CryptoShieldDelegate cryptoShieldDelegate = getRekeyCryptoShieldDelegate();
+
+		assertThat(cryptoShieldDelegate.getCurrentEncryptionKey()).isEqualTo(mockEncryptionKey);
+		assertThat(cryptoShieldDelegate.getHmacStrategy(testEntity)).isNotPresent();
+	}
+
+	@Test
 	void constructorEmptyHmacStrategy() {
 		given(mockCryptoShield.getHmacStrategy(testEntity)).willReturn(Optional.empty());
 		CryptoShieldDelegate cryptoShieldDelegate = getRekeyCryptoShieldDelegate();
@@ -74,8 +82,8 @@ class RekeyCryptoShieldTest {
 	}
 
 	@Test
-	void constructorEmptyHmacKeys() {
-		rekeyCryptoShield = new RekeyCryptoShield(mockCryptoShield, mockEncryptionKey, List.of());
+	void constructorNoHmacKeys() {
+		rekeyCryptoShield = new RekeyCryptoShield(mockCryptoShield, mockEncryptionKey, null);
 		given(mockCryptoShield.getHmacStrategy(testEntity)).willReturn(Optional.empty());
 		CryptoShieldDelegate cryptoShieldDelegate = getRekeyCryptoShieldDelegate();
 
@@ -85,7 +93,7 @@ class RekeyCryptoShieldTest {
 
 	@Test
 	void encrypt() {
-		rekeyCryptoShield.protect(testEntity);
+		rekeyCryptoShield.encrypt(testEntity);
 
 		then(mockCryptoShield).should().encrypt(testEntity, getRekeyCryptoShieldDelegate());
 	}

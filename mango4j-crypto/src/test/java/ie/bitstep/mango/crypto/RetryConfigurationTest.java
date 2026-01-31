@@ -15,6 +15,16 @@ public class RetryConfigurationTest {
 	public static final int TEST_POOL_SIZE = 10;
 
 	@Test
+	void retryConfigurationPoolsizeLessThan1() {
+		RetryConfiguration retryConfiguration = new RetryConfiguration(0, TEST_MAX_ATTEMPTS, TEST_BACKOFF_DURATION, TEST_BACK_OFF_MULTIPLIER);
+
+		assertThat(retryConfiguration.maxAttempts()).isEqualTo(TEST_MAX_ATTEMPTS);
+		assertThat(retryConfiguration.backoffDelay()).isEqualTo(TEST_BACKOFF_DURATION);
+		assertThat(retryConfiguration.backOffMultiplier()).isEqualTo(3.7f);
+		assertThat(retryConfiguration.poolSize()).isEqualTo(1);
+	}
+
+	@Test
 	void retryConfigurationMultiplierRoundedToOneDecimalPlace() {
 		RetryConfiguration retryConfiguration = new RetryConfiguration(TEST_POOL_SIZE, TEST_MAX_ATTEMPTS, TEST_BACKOFF_DURATION, TEST_BACK_OFF_MULTIPLIER);
 

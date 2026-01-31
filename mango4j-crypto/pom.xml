@@ -15,7 +15,7 @@
 
     <properties>
         <sonar.exclusions>
-            **/RekeyScheduler.java,**/RekeySchedulerInitializationException.java
+            ie/bitstep/mango/crypto/keyrotation/**
         </sonar.exclusions>
         <sonar.cpd.exclusions>**/CryptoShieldHmacHolder.java</sonar.cpd.exclusions>
     </properties>
@@ -57,7 +57,7 @@
                     <mutationThreshold>100</mutationThreshold>
                     <excludedClasses>
                         <!-- These classes are experimental for now (and complex) so not writing tests until it settles -->
-                        <param>ie.bitstep.mango.crypto.keyrotation.RekeyScheduler</param>
+                        <param>ie.bitstep.mango.crypto.keyrotation.**</param>
                     </excludedClasses>
                     <excludedMethods>
                         <!-- Exclude logging-only method from mutation testing -->

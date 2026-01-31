@@ -15,6 +15,7 @@ import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.custom.TestAnnot
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.single.InvalidAnnotatedEntityForSingleHmacFieldStrategyNonTransientHmacField;
 import ie.bitstep.mango.crypto.testdata.entities.hmacstrategies.single.TestAnnotatedEntityForSingleHmacFieldStrategy;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,6 +24,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -199,6 +202,72 @@ class SingleHmacFieldStrategyTest {
 		assertThatThrownBy(() -> singleHmacFieldStrategy.hmac(testEntity))
 				.isInstanceOf(NoHmacKeysFoundException.class)
 				.hasMessage("No HMAC CryptoKeys were found");
+	}
+
+	@Test
+	@DisplayName("When multiple HMAC keys exist, use the most recent one based on created date")
+	void hmacHmacKeysListMultipleKeysWithCreatedDate() {
+		given(mockHmacHelper.cryptoKeyProvider()).willReturn(mockCryptoKeyProvider);
+		given(mockHmacHelper.encryptionService()).willReturn(mockEncryptionService);
+
+		testCryptoKey.setCreatedDate(Instant.now().minus(Duration.ofDays(1)));
+		CryptoKey secondHmacKey = TestData.testCryptoKey();
+		secondHmacKey.setId("SecondHmacKeyId");
+		secondHmacKey.setCreatedDate(Instant.now());
+
+		given(mockCryptoKeyProvider.getCurrentHmacKeys()).willReturn(List.of(testCryptoKey, secondHmacKey));
+
+
+		singleHmacFieldStrategy.hmac(testEntity);
+
+		assertThat(testEntity.getEthnicity()).isEqualTo(TEST_ETHNICITY);
+		assertThat(testEntity.getFavouriteColor()).isEqualTo(TEST_FAVOURITE_COLOR);
+		assertThat(testEntity.getPanHmac()).isEqualTo(TEST_PAN);
+		assertThat(testEntity.getUserNameHmac()).isEqualTo(TEST_USERNAME);
+
+		then(mockEncryptionService).should(times(2)).hmac(hmacHolderArgumentCaptor.capture());
+		assertThat(hmacHolderArgumentCaptor.getAllValues()).hasSize(2);
+		System.out.println(hmacHolderArgumentCaptor.getAllValues().get(0).get(0).getCryptoKey().getId());
+		System.out.println(hmacHolderArgumentCaptor.getAllValues().get(1).get(0).getCryptoKey().getId());
+		assertThat(hmacHolderArgumentCaptor.getAllValues().get(0)).hasSize(1)
+				.anyMatch(hmacHolder -> hmacHolder.getCryptoKey().equals(secondHmacKey))
+				.anyMatch(hmacHolder -> hmacHolder.getHmacAlias().equals(TEST_PAN_FIELD_NAME))
+				.anyMatch(hmacHolder -> hmacHolder.getValue().equals(TEST_PAN));
+		assertThat(hmacHolderArgumentCaptor.getAllValues().get(1)).hasSize(1)
+				.anyMatch(hmacHolder -> hmacHolder.getCryptoKey().equals(secondHmacKey))
+				.anyMatch(hmacHolder -> hmacHolder.getHmacAlias().equals(TEST_USER_NAME_FIELD_NAME))
+				.anyMatch(hmacHolder -> hmacHolder.getValue().equals(TEST_USERNAME));
+	}
+
+	@Test
+	@DisplayName("When HMAC keys created date are null, the 1st CryptoKey in the list is used")
+	void hmacHmacKeysListCreatedDateNull() {
+		given(mockHmacHelper.cryptoKeyProvider()).willReturn(mockCryptoKeyProvider);
+		given(mockHmacHelper.encryptionService()).willReturn(mockEncryptionService);
+		CryptoKey secondHmacKey = TestData.testCryptoKey();
+		secondHmacKey.setId("SecondHmacKeyId");
+		testCryptoKey.setCreatedDate(null);
+		secondHmacKey.setCreatedDate(null);
+		given(mockCryptoKeyProvider.getCurrentHmacKeys()).willReturn(List.of(testCryptoKey, secondHmacKey));
+
+
+		singleHmacFieldStrategy.hmac(testEntity);
+
+		assertThat(testEntity.getEthnicity()).isEqualTo(TEST_ETHNICITY);
+		assertThat(testEntity.getFavouriteColor()).isEqualTo(TEST_FAVOURITE_COLOR);
+		assertThat(testEntity.getPanHmac()).isEqualTo(TEST_PAN);
+		assertThat(testEntity.getUserNameHmac()).isEqualTo(TEST_USERNAME);
+
+		then(mockEncryptionService).should(times(2)).hmac(hmacHolderArgumentCaptor.capture());
+		assertThat(hmacHolderArgumentCaptor.getAllValues()).hasSize(2);
+		assertThat(hmacHolderArgumentCaptor.getAllValues().get(0)).hasSize(1)
+				.anyMatch(hmacHolder -> hmacHolder.getCryptoKey().equals(testCryptoKey))
+				.anyMatch(hmacHolder -> hmacHolder.getHmacAlias().equals(TEST_PAN_FIELD_NAME))
+				.anyMatch(hmacHolder -> hmacHolder.getValue().equals(TEST_PAN));
+		assertThat(hmacHolderArgumentCaptor.getAllValues().get(1)).hasSize(1)
+				.anyMatch(hmacHolder -> hmacHolder.getCryptoKey().equals(testCryptoKey))
+				.anyMatch(hmacHolder -> hmacHolder.getHmacAlias().equals(TEST_USER_NAME_FIELD_NAME))
+				.anyMatch(hmacHolder -> hmacHolder.getValue().equals(TEST_USERNAME));
 	}
 
 	@Test

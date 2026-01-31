@@ -4,6 +4,7 @@ import ie.bitstep.mango.crypto.HmacStrategyHelper;
 import ie.bitstep.mango.crypto.core.domain.CryptoKey;
 import ie.bitstep.mango.crypto.core.exceptions.ActiveHmacKeyNotFoundException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static java.time.Instant.now;
@@ -37,20 +38,20 @@ public final class SingleHmacFieldStrategyForTimeBasedCryptoKey extends SingleHm
 	 * @param currentHmacKeys the current HMAC keys
 	 * @return the active HMAC key
 	 */
-	@Override
 	protected CryptoKey getHmacKeyToUse(List<CryptoKey> currentHmacKeys) {
-		CryptoKey cryptoKeyToUse = null;
-		for (CryptoKey hmacKey : currentHmacKeys) {
-			if (hmacKey.getKeyStartTime() != null && hmacKey.getKeyStartTime().isBefore(now())) {
-				cryptoKeyToUse = hmacKey;
-				break;
+		List<CryptoKey> filteredCurrentHmacKeys = new ArrayList<>(currentHmacKeys);
+		CryptoKey mostRecentKey = super.getHmacKeyToUse(filteredCurrentHmacKeys);
+		if (mostRecentKey.getKeyStartTime() != null) {
+			if (mostRecentKey.getKeyStartTime().isAfter(now())) {
+				filteredCurrentHmacKeys.remove(mostRecentKey);
+				if (filteredCurrentHmacKeys.isEmpty()) {
+					throw new ActiveHmacKeyNotFoundException();
+				}
+				return getHmacKeyToUse(filteredCurrentHmacKeys);
+			} else {
+				return mostRecentKey;
 			}
 		}
-
-		if (cryptoKeyToUse != null) {
-			return cryptoKeyToUse;
-		} else {
-			throw new ActiveHmacKeyNotFoundException();
-		}
+		throw new ActiveHmacKeyNotFoundException();
 	}
 }

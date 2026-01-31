@@ -27,15 +27,9 @@ public interface CryptoKeyProvider {
 
 	/**
 	 *
-	 * @return An ordered list (based on the keys created date) of {@link CryptoKey HMAC keys} that should be used for the current cryptographic operation.
+	 * @return A list of {@link CryptoKey HMAC keys} that should be used for the current cryptographic operation.
 	 * Most likely this will be the HMAC keys that the current tenant (in your application request context) is
 	 * currently using.
-	 * <p>
-	 *     <b>IMPORTANT!!!</b> - This list needs to be ordered in descending order of when the {@link CryptoKey HMAC keys}
-	 *     were created with the most recent {@link CryptoKey HMAC key} as the first element of the list. If you don't
-	 *     do this then the SingleHmacFieldStrategy and the SingleHmacFieldStrategyForTimeBasedCryptoKey strategies
-	 *     will not work correctly.
-	 * </p>
 	 */
 	List<CryptoKey> getCurrentHmacKeys();
 

@@ -21,6 +21,7 @@ import java.util.Map;
 import static ie.bitstep.mango.crypto.hmac.FieldValidator.validateSourceHmacField;
 import static ie.bitstep.mango.crypto.utils.ReflectionUtils.getFieldStringValue;
 import static java.lang.String.format;
+import static java.util.Comparator.comparing;
 
 /**
  * Applications should rarely (almost never) use this strategy.
@@ -134,12 +135,15 @@ public class SingleHmacFieldStrategy implements HmacStrategy {
 	}
 
 	/**
-	 * Picks the HMAC key to use from the supplied list.
+	 * Picks the most recent HMAC key from the supplied list or else just gets the first one in the list.
 	 *
 	 * @param currentHmacKeys the current HMAC keys
 	 * @return the selected HMAC key
 	 */
 	protected CryptoKey getHmacKeyToUse(List<CryptoKey> currentHmacKeys) {
-		return currentHmacKeys.get(0);
+		return currentHmacKeys.stream()
+				.filter(cryptoKey -> cryptoKey.getCreatedDate() != null)
+				.max(comparing(CryptoKey::getCreatedDate))
+				.orElse(currentHmacKeys.get(0));
 	}
 }
