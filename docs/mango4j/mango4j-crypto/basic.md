@@ -25,9 +25,10 @@ both).
 This library is not an encryption provider or standard, it's a framework. Just like Springboot isn't a web 
 application, Mango4j-crypto isn't encryption. Mango4j-crypto enables you to implement Application Level Encryption in 
 your applications quickly and effectively, just like Springboot enables you to build a web application quickly 
-and effectively. It allows you to use any cryptographic approaches you need and doesn't tie you into particular 
-cryptographic provider. This will make more sense after you read the [the official general documentation](../mango4j-crypto-core/basic.md), so 
-please read that to get up to speed.
+and effectively. It allows you to use any cryptographic approaches you need and doesn't tie you into any particular 
+cryptographic provider. This will make more sense after you read [the official general documentation](../mango4j-crypto-core/basic.md), so 
+please read that to get up to speed. The library has extensive javadocs also so it's encouraged for developers to read 
+those also.
 
 The following guide is specifically aimed at showing you how to use the mango4j-crypto library in your applications.
 
@@ -56,17 +57,11 @@ fields. This is shown in the example entity code below.
 ### @Hmac
 
 The @Hmac annotation should be placed on fields which must be HMACed for either lookup or unique constraint purposes.
-Depending on the HmacStrategy that your entity is using there
-needs to be corresponding fields where the library should write the HMACs to. Since the below example uses the
-@SingleHmacStrategy (generally not recommended but for now it's the
-easiest to understand) each field annotated with @Hmac must also have accompanying fields where the library should place
-the generated HMAC. For @SingleHmacStrategy each @Hmac
-field must be accompanied by a field with the suffix 'Hmac'. In the below example you can see that pan has an associated
-field called 'panHmac'. There are currently 4 HMAC
-strategies supported by the library and each one has slightly different approaches related to the design of your entity.
-This will most certainly seem strange, but they will be
+Depending on the HmacStrategy that your entity is using there needs to be corresponding fields where the library should 
+write the HMACs to. There are currently 4 HMAC strategies supported by the library and each one has slightly different 
+approaches related to the design of your entity. This will most certainly seem strange, but they will be
 discussed at length further in this documentation when it will make more sense. Also, if you're familiar with the
-challenges mentioned in the official Mango4J-crypto general documentation
+challenges mentioned in the [the official Mango4j-crypto general documentation](../mango4j-crypto-core/basic.md)
 they will make more sense.
 
 > **NOTE**: All fields marked with @Hmac must be transient or the library will throw an error on registration of the
@@ -77,7 +72,8 @@ they will make more sense.
 
 As discussed above, if you have any fields marked with @Encrypt then you must have a single field marked with
 @EncryptedData where the library will store the ciphertext for all
-encrypted source fields.
+encrypted source fields. Underneath the hood, the library serializes all original fields into a single JSON structure 
+which it then encrypts in a single operation.   
 
 ### @EncryptionKeyId
 
@@ -86,7 +82,7 @@ it to the ID of the crypto key that was used to perform the
 encryption. This is not necessary for decryption purposes (the CryptoKey.key ID is also stored inside the @EncryptedData
 anyway) but it is useful for more performant rekey query purposes so it's recommended to have this anyway
 as it won't hurt and can be useful later.
-It's basically used to find the records which are (or aren't) using a certain encryption/HMAC key so that they can be
+It would basically be used to find the records which are (or aren't) using a certain encryption/HMAC key so that they can be
 rekeyed with the current encryption key.
 
 # Getting Started
@@ -552,8 +548,8 @@ public class UserProfileEntityForListHmacStrategy implements Lookup, Unique {
 ```
 <br>
 
-> * The above example entity is designed for MongoDB (as it's the most suitable DB for this HMAC strategy). If you are using
-it with an SQL DB check out the mango4j-crypto-example demo application which does the exact same for an SQL DB.
+The above example entity is designed for MongoDB (as it's the most suitable DB for this HMAC strategy). If you are using
+it with an SQL DB check out the [mango4j-crypto-example](https://github.com/bitstep-ie/mango4j-examples/tree/main/mango4j-crypto-example) demo application which does the exact same for an SQL DB.
 
 > **NOTES:**
 > * Similar to the SingleHmacStrategy sample entity, the userName field is annotated with @Hmac but here it also has a 
@@ -595,13 +591,21 @@ the PAN without dashes or spaces (if there are any) and the HMAC of the full ori
 library has some standard HMAC tokenizers, please see the javadocs
 for each one to learn what HMAC representations they generate. Applications can supply their own HmacTokenizers with
 whatever tokenization logic they need by implementing the
-HmacTokenizer interface. If you have created a HmacTokenizer you think would be generally useful to others please let us
+[HmacTokenizer](../../../mango4j-crypto/src/main/java/ie/bitstep/mango/crypto/tokenizers/HmacTokenizer.java) interface. 
+If you have created a HmacTokenizer you think would be generally useful to others please let us
 know and we'll add it to the library. Using HMAC Tokenizers
 will help applications with more flexible searching functionality and is another reason that the ListHmacFieldStrategy
 is the most powerful of the 4 core HMAC strategies.
 
 ### Compound Unique Constraints With The List HMAC Strategy
-TBD
+One extra challenge when using the List HMAC strategy is that if you have a requirement of needing to create a compound 
+unique constraint on a group of fields that include a HMAC field then this cannot be done the normal way. You can 
+create these types of constraints using the 
+[@UniqueGroup](../../../../mango4j/mango4j-crypto/src/main/java/ie/bitstep/mango/crypto/annotations/UniqueGroup.java) 
+annotation.  You can place this annotation on each field marked with @Hmac and give them all the same name and a unique 
+order number (which you must never change!) and the library will calculate a single unique HMAC for them all.
+> NOTE: Mixing HMAC and cleartext fields in a unique group is fine. But at least one field in the group must be marked 
+> with @Hmac otherwise the library will throw an error on startup.
 
 ## Single HMAC Strategy With Key Start Time
 
@@ -611,11 +615,119 @@ This strategy almost works the same way as the SingleHmacStrategy, except that i
 write operations until the CryptoKey.startTime has passed (make sure to set this field on your corresponding CryptoKeys) .
 
 ## Double HMAC Strategy
-TBD
+Please read the [the official general documentation](../mango4j-crypto-core/basic.md#double-hmac-strategy) a description 
+of the Double HMAC Strategy and for when you might want to use it. The entity definition when using it is similar to the 
+entity definition of the Single HMAC Strategy. Below is an example entity definition.
+
+```java language=java
+import ie.bitstep.mango.crypto.annotations.Encrypt;
+import ie.bitstep.mango.crypto.annotations.EncryptedData;
+import ie.bitstep.mango.crypto.annotations.Hmac;
+import ie.bitstep.mango.crypto.annotations.strategies.DoubleHmacStrategy;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+
+@DoubleHmacStrategy
+@Entity(name = "USER_PROFILE_ENTITY_FOR_DOUBLE_HMAC_STRATEGY")
+public class UserProfileEntity {
+
+    @Encrypt
+    @Hmac
+    private transient String pan;
+
+    @Encrypt
+    @Hmac
+    private transient String userName;
+
+    @Encrypt
+    private transient String ethnicity;
+
+    public String getPan() {
+        return pan;
+    }
+
+    public void setPan(String pan) {
+        this.pan = pan;
+    }
+
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getEthnicity() {
+        return ethnicity;
+    }
+
+    public void setEthnicity(String ethnicity) {
+        this.ethnicity = ethnicity;
+    }
+
+    @Id
+    @Column(name = "ID")
+    private String id;
+
+    @Column(name = "FAVOURITE_COLOR")
+    private String favouriteColor;
+
+    @Column(name = "USERNAME_HMAC_1", unique = true)
+    private String userNameHmac1;
+
+    @Column(name = "USERNAME_HMAC_2", unique = true)
+    private String userNameHmac2;
+
+    @Column(name = "PAN_HMAC_1")
+    private String panHmac1;
+
+    @Column(name = "PAN_HMAC_2")
+    private String panHmac2;
+
+    @Column(name = "ENCRYPTED_DATA")
+    @EncryptedData
+    private String encryptedData;
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getFavouriteColor() {
+        return favouriteColor;
+    }
+
+    public void setFavouriteColor(String favouriteColor) {
+        this.favouriteColor = favouriteColor;
+    }
+}
+```
+
+> **NOTES**:
+> * We've added the @DoubleHmacStrategy annotation to the class.
+> * This entity definition is almost the same as the one for SingleHmacStrategy except that each field annotated with 
+>   @Hmac has 2 associated HMAC fields 'panHmac1'/'panHmac2' and 'userNameHmac1'/'userNameHmac2'. This is because 
+>   with the Double HMAC Strategy we need 2 HMACs to be stored separately for each HMAC source field. 
+> * Again, you'll notice that we didn't bother defining getters/setters for the USERNAME_HMAC_1, USERNAME_HMAC_2, 
+>   PAN_HMAC_1 or PAN_HMAC_2 fields either, for the same reason that we didn't bother defining getters/setters for the 
+>   ENCRYPTED_DATA field.
+> * The panHmac1, panHmac2, userNameHmac1 and userNameHmac2 fields are persisted to the DB in our example and each have their own columns 
+>   (we're using Hibernate here). 
+> * The USERNAME_HMAC_1 and USERNAME_HMAC_2 each have a unique constraint on them also.
+> * Application search code must look for matching HMACs in both of the HMAC columns associated with each HMAC source 
+    field. So those queries become OR queries in the case of multiple HMAC keys in use. You can see the 
+>   [mango4j-examples code](https://github.com/bitstep-ie/mango4j-examples/blob/main/mango4j-crypto-example/src/main/java/ie/bitstep/mango/examples/crypto/example/doublehmacstrategy/service/UserProfileService.java#L62) to see an example of what this might look like.
+
+<br>
 
 # Key Rotation
 Key rotation is fairly straightforward when you just think of it as an additive process. A new encryption or HMAC key is 
-added to the system but the old keys are left as they are. Only when no more records are left which was encrypted or 
+added to the system but the old keys are left as they are. Only when no more records are left which were encrypted or 
 has had HMACs calculated with an older key should that key be removed from the system. As long as your 
 CryptoKeyProvider implementation works as prescribed then there shouldn't be much to think about when it comes to key 
 rotation. 
@@ -661,7 +773,8 @@ without
 restarting the application. In order to make this periodic RekeyScheduler start rekeying entities you need to make use
 of
 the CryptoKey.rekeyMode field. Mango4j-crypto supports 2 types of rekey modes: KEY_OFF and KEY_ON. Please see the
-general documentation for an explanation of these values. Once the CryptoKey.rekeyMode field is set to either
+[general documentation](../mango4j-crypto-core/basic.md#rekeying-re-encrypting-existing-records-with-the-new-key) 
+for an explanation of these values. Once the CryptoKey.rekeyMode field is set to either
 KEY_ON or KEY_OFF this RekeyScheduler will trigger the rekeying process the next time it runs (defined by
 `withRekeyCheckInterval()` as above).
 
