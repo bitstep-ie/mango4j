@@ -24,6 +24,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -207,8 +209,12 @@ class SingleHmacFieldStrategyTest {
 	void hmacHmacKeysListMultipleKeysWithCreatedDate() {
 		given(mockHmacHelper.cryptoKeyProvider()).willReturn(mockCryptoKeyProvider);
 		given(mockHmacHelper.encryptionService()).willReturn(mockEncryptionService);
+
+		testCryptoKey.setCreatedDate(Instant.now().minus(Duration.ofDays(1)));
 		CryptoKey secondHmacKey = TestData.testCryptoKey();
 		secondHmacKey.setId("SecondHmacKeyId");
+		secondHmacKey.setCreatedDate(Instant.now());
+
 		given(mockCryptoKeyProvider.getCurrentHmacKeys()).willReturn(List.of(testCryptoKey, secondHmacKey));
 
 
@@ -221,6 +227,8 @@ class SingleHmacFieldStrategyTest {
 
 		then(mockEncryptionService).should(times(2)).hmac(hmacHolderArgumentCaptor.capture());
 		assertThat(hmacHolderArgumentCaptor.getAllValues()).hasSize(2);
+		System.out.println(hmacHolderArgumentCaptor.getAllValues().get(0).get(0).getCryptoKey().getId());
+		System.out.println(hmacHolderArgumentCaptor.getAllValues().get(1).get(0).getCryptoKey().getId());
 		assertThat(hmacHolderArgumentCaptor.getAllValues().get(0)).hasSize(1)
 				.anyMatch(hmacHolder -> hmacHolder.getCryptoKey().equals(secondHmacKey))
 				.anyMatch(hmacHolder -> hmacHolder.getHmacAlias().equals(TEST_PAN_FIELD_NAME))

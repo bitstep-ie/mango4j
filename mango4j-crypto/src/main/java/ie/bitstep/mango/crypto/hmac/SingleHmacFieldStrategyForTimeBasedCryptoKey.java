@@ -44,7 +44,7 @@ public final class SingleHmacFieldStrategyForTimeBasedCryptoKey extends SingleHm
 		if (mostRecentKey.getKeyStartTime() != null) {
 			if (mostRecentKey.getKeyStartTime().isAfter(now())) {
 				filteredCurrentHmacKeys.remove(mostRecentKey);
-				if(filteredCurrentHmacKeys.isEmpty()) {
+				if (filteredCurrentHmacKeys.isEmpty()) {
 					throw new ActiveHmacKeyNotFoundException();
 				}
 				return getHmacKeyToUse(filteredCurrentHmacKeys);
