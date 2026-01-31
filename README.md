@@ -15,9 +15,9 @@
 <div align="center">
     <a href="https://github.com/bitstep-ie/mango4j">
     <picture>
-        <source srcset="documentation/docs/assets/mango-with-text-black.png" media="(prefers-color-scheme: light)">
-        <source srcset="documentation/docs/assets/mango-with-text-white.png" media="(prefers-color-scheme: dark)">
-        <img src="documentation/docs/assets/mango-with-text-black.png" alt="mango Logo">
+        <source srcset="docs/assets/mango-with-text-black.png" media="(prefers-color-scheme: light)">
+        <source srcset="docs/assets/mango-with-text-white.png" media="(prefers-color-scheme: dark)">
+        <img src="docs/assets/mango-with-text-black.png" alt="mango Logo">
     </picture>
     </a>
     <h3 align="center">mango-go</h3>
@@ -52,8 +52,3 @@ Comprised of the following modules:
 - mango4j-utils
 - mango4j-validation
 - mango4j-hibernate-proxy-resolver
-
-## Documentation
-
-All the documentation can be found in `/docs` which on release, latest gets published to [confluence here](TBD) and a history of older versions can be found in this [confluence location](TBD).
-
