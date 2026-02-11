@@ -1,59 +1,60 @@
 name: Snapshots
 
 on:
-  push:
-    branches:
-      - main
-
+  workflow_run:
+    workflows: ["Release Drafter"]
+    types:
+      - completed
 
 permissions:
   contents: read
 
 jobs:
-  runs-on: ubuntu-latest
-  permissions:
-      contents: write
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+  snapshots:
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Skip bot-triggered runs
-      if: github.actor == 'github-actions[bot]'
-      run: exit 0
-    
-    - name: Get draft release version
-      id: draft
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const releases = await github.rest.repos.listReleases({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-          });
+      - name: Skip bot-triggered runs
+        if: github.actor == 'github-actions[bot]'
+        run: exit 0
+      
+      - name: Get draft release version
+        id: draft
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releases = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
 
-          const draft = releases.data.find(r => r.draft === true);
+            const draft = releases.data.find(r => r.draft === true);
 
-          if (!draft) {
-            core.setFailed("No draft release found");
-            return;
-          }
+            if (!draft) {
+              core.setFailed("No draft release found");
+              return;
+            }
 
-          const version = draft.tag_name.replace(/^v/, "");
-          core.setOutput("version", version);
-    
-    - name: Update pom versions
-      run: |
-        VERSION="${{ steps.draft.outputs.version }}-SNAPSHOT"
-        echo "Setting version to $VERSION"
-        mvn versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
-    
-    - name: Commit updated pom versions
-      run: |
-        if git diff --quiet; then
-          echo "No version changes, skipping commit"
-          exit 0
-        fi
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git commit -am "chore: sync pom versions with release draft"
-        git push
+            const version = draft.tag_name.replace(/^v/, "");
+            core.setOutput("version", version);
+      
+      - name: Update pom versions
+        run: |
+          VERSION="${{ steps.draft.outputs.version }}-SNAPSHOT"
+          echo "Setting version to $VERSION"
+          mvn versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
+      
+      - name: Commit updated pom versions
+        run: |
+          if git diff --quiet; then
+            echo "No version changes, skipping commit"
+            exit 0
+          fi
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git commit -am "chore: sync pom versions with release draft"
+          git push
