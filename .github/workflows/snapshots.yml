@@ -58,5 +58,5 @@ jobs:
           git config user.email "github-actions@github.com"
           git commit -am "chore: sync pom versions with release draft"
 
-          # Push using GITHUB_TOKEN
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+          # Push using COMMIT_PAT (token in Mada's ownership) as GITHUB_TOKEN is not usable as I can't find a way to allow gh actions to bypass branch ruleset
+          git push https://x-access-token:${{ secrets.COMMIT_PAT }}@github.com/${{ github.repository }} HEAD:main
