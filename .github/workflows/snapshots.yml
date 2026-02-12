@@ -54,8 +54,7 @@ jobs:
             echo "No version changes, skipping commit"
             exit 0
           fi
-           git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          
           git commit -am "chore: sync pom versions with release draft"
 
           # Push using COMMIT_PAT (token in Mada's ownership) as GITHUB_TOKEN is not usable as I can't find a way to allow gh actions to bypass branch ruleset
