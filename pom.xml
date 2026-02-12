@@ -16,7 +16,7 @@
 
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j</artifactId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
 
     <properties>
         <java.version>17</java.version>
