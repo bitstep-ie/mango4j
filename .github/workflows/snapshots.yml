@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   snapshots:
-    if: !endsWith(github.actor, '[bot]')
+    if: ${{ !endsWith(github.actor, '[bot]') }}
     runs-on: ubuntu-latest
     
     permissions:
