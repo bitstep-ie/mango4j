@@ -53,7 +53,7 @@ jobs:
         run: |
           VERSION="${{ steps.draft.outputs.version }}-SNAPSHOT"
           echo "Setting version to $VERSION"
-          mvn versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
+          mvn -B -q versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
 
       - name: Set Git User
         run: |
