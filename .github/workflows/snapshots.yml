@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   snapshots:
-    if: ${{ !endsWith(github.event.workflow_run.actor.login, '[bot]') }}
+    if: ${{ !endsWith(github.event.workflow_run.head_commit.committer.name, '[bot]') }}
     runs-on: ubuntu-latest
     
     permissions:
