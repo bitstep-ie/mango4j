@@ -70,3 +70,11 @@ jobs:
           git commit -am "chore: sync pom versions with release draft"
 
           git push
+
+      - name: Publish Snapshot
+        if: github.ref == 'refs/heads/main'
+        run: mvn -B -Drevision=1.3.0-SNAPSHOT deploy
+        env:
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}

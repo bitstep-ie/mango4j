@@ -4,7 +4,35 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    
+    <groupId>ie.bitstep.mango</groupId>
+    <artifactId>mango4j</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+
+    <name>Your Artifact</name>
+    <description>What this does</description>
+    <url>https://github.com/bitstep-ie/mango4j</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>bitstep</id>
+            <name>Bitstep</name>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/bitstep-ie/mango4j.git</connection>
+        <developerConnection>scm:git:ssh://github.com/bitstep-ie/mango4j.git</developerConnection>
+        <url>https://github.com/bitstep-ie/mango4j</url>
+    </scm>
 
     <modules>
         <module>mango4j-utils</module>
@@ -14,9 +42,18 @@
         <module>mango4j-reflection</module>
     </modules>
 
-    <groupId>ie.bitstep.mango</groupId>
-    <artifactId>mango4j</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+
+    <distributionManagement>
+        <repository>
+            <id>central</id>
+            <url>https://central.sonatype.com/api/v1/publisher</url>
+        </repository>
+
+        <snapshotRepository>
+            <id>central-snapshots</id>
+            <url>https://central.sonatype.com/api/v1/publisher</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <properties>
         <java.version>17</java.version>
@@ -193,6 +230,21 @@
                         <goals>
                             <goal>report</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                    <id>sign-artifacts</id>
+                    <phase>verify</phase>
+                    <goals>
+                        <goal>sign</goal>
+                    </goals>
                     </execution>
                 </executions>
             </plugin>
