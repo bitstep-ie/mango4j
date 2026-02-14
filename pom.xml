@@ -102,6 +102,7 @@
                     <publishingServerId>central</publishingServerId>
                     <waitUntil>published</waitUntil>
                 </configuration>
+            </plugin>
 
             <!--     Deploy       -->
             <plugin>
