@@ -10,8 +10,8 @@
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>Your Artifact</name>
-    <description>What this does</description>
+    <name>Mango4j</name>
+    <description>Utility libraries for java</description>
     <url>https://github.com/bitstep-ie/mango4j</url>
 
     <licenses>
@@ -50,8 +50,8 @@
         </repository>
 
         <snapshotRepository>
-            <id>central-snapshots</id>
-            <url>https://central.sonatype.com/api/v1/publisher</url>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
