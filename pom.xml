@@ -101,6 +101,7 @@
                 <configuration>
                     <publishingServerId>central</publishingServerId>
                     <waitUntil>published</waitUntil>
+                    <publishSequentially>true</publishSequentially>
                 </configuration>
             </plugin>
 
