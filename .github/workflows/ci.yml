@@ -24,11 +24,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          server-id: central
-          server-username: CENTRAL_USERNAME
-          server-password: CENTRAL_PASSWORD
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase: GPG_PASSPHRASE
 
       - name: Build with Maven
         run: mvn -e -X -B install --file pom.xml
