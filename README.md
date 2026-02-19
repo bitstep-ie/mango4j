@@ -41,9 +41,3 @@
 <br />
 
 
-Comprised of the following modules:
-- mango4j-collections
-- mango4j-reflection
-- mango4j-utils
-- mango4j-validation
-- mango4j-hibernate-proxy-resolver
