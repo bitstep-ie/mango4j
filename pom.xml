@@ -147,9 +147,6 @@
                             <goal>jar</goal>
                         </goals>
                     </execution>
-                    <configuration>
-                        <failOnError>false</failOnError>
-                    </configuration>
                 </executions>
             </plugin>
 
