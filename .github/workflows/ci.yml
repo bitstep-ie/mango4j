@@ -27,11 +27,14 @@ jobs:
           cache: maven
       - name: Build with Maven
         run: mvn -B install --file pom.xml
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: Update dependency graph
         uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8 # v5.0.0 - Using full commit sha to avoid security hotspot
 
       - name: SonarQube Scan
+        if: github.event_name != 'pull_request'
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
@@ -43,6 +46,23 @@ jobs:
             -Dsonar.token=${SONAR_TOKEN} \
             -Dsonar.branch.name=${GITHUB_REF_NAME} \
             -Dsonar.coverage.exclusions=**/test/**
+      
+      - name: SonarQube Scan-PRs
+        if: github.event_name == 'pull_request'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          mvn verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.projectKey=bitstep-ie_mango4j \
+            -Dsonar.organization=bitstep-ie \
+            -Dsonar.host.url=${SONAR_HOST_URL} \
+            -Dsonar.token=${SONAR_TOKEN} \
+            -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+            -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+            -Dsonar.pullrequest.base=${{ github.base_ref }} \
+            -Dsonar.coverage.exclusions=**/test/**
+
 
   docs:
     runs-on: ubuntu-latest
