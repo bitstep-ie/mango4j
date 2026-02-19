@@ -84,7 +84,7 @@ jobs:
 
       - name: Publish Snapshot
         if: github.ref == 'refs/heads/main'
-        run: mvn -B deploy
+        run: mvn -X -B deploy
         env:
           CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
           CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
