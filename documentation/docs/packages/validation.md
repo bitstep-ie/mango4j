@@ -11,7 +11,7 @@ Jakarta validation helpers and reusable constraints.
 ## How to use
 ### Gradle
 ```gradle
-implementation("ie.bitstep.mango:mango4j-validation:{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}")
+implementation("ie.bitstep.mango:mango4j-validation:{{ mango4j_latest_version }}")
 ```
 
 ### Maven
@@ -19,7 +19,7 @@ implementation("ie.bitstep.mango:mango4j-validation:{{ env.MANGO4J_LATEST_VERSIO
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j-validation</artifactId>
-    <version>{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}</version>
+    <version>{{ mango4j_latest_version }}</version>
 </dependency>
 ```
 

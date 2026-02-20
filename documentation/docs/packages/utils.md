@@ -14,7 +14,7 @@ General-purpose utilities used across mango4j modules.
 ## How to use
 ### Gradle
 ```gradle
-implementation("ie.bitstep.mango:mango4j-utils:{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}")
+implementation("ie.bitstep.mango:mango4j-utils:{{ mango4j_latest_version }}")
 ```
 
 ### Maven
@@ -22,7 +22,7 @@ implementation("ie.bitstep.mango:mango4j-utils:{{ env.MANGO4J_LATEST_VERSION or 
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j-utils</artifactId>
-    <version>{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}</version>
+    <version>{{ mango4j_latest_version }}</version>
 </dependency>
 ```
 

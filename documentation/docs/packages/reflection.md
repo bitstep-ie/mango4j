@@ -11,7 +11,7 @@ Reflection helpers with cached metadata and property accessors.
 ## How to use
 ### Gradle
 ```gradle
-implementation("ie.bitstep.mango:mango4j-reflection:{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}")
+implementation("ie.bitstep.mango:mango4j-reflection:{{ mango4j_latest_version }}")
 ```
 
 ### Maven
@@ -19,7 +19,7 @@ implementation("ie.bitstep.mango:mango4j-reflection:{{ env.MANGO4J_LATEST_VERSIO
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j-reflection</artifactId>
-    <version>{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}</version>
+    <version>{{ mango4j_latest_version }}</version>
 </dependency>
 ```
 
