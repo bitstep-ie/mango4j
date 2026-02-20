@@ -42,7 +42,7 @@ jobs:
         working-directory: documentation
 #        if: ${{ github.event.release && github.event.release.tag_name != '' }}
         run: |
-          DOCS_VERSION=0.1.0 \
+          MANGO4J_LATEST_VERSION=0.1.0 \
           mike deploy 0.1.0 latest -u --push
 # mike deploy ${{ github.event.release.tag_name }} latest -u --push
 
