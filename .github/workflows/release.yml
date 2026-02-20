@@ -8,6 +8,9 @@ on:
         required: true
         default: "no"
 
+permissions:
+  contents: write
+
 jobs:
   run:
     if: ${{ github.event.inputs.confirm == 'yes' }}
