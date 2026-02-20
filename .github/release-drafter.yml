@@ -31,6 +31,7 @@ categories:
   
 change-template: '- $TITLE (#$NUMBER) by @$AUTHOR'
 change-title-escapes: '\<*_&`' # You can add # and @ to disable mentions, and add ` to disable code blocks.
+
 version-resolver:
   major:
     labels:
@@ -42,8 +43,7 @@ version-resolver:
     labels:
       - 'patch'
   default: patch
-version-template: >
-  ${PREVIOUS_TAG == '' && '1.0.0' || RESOLVED_VERSION}
+
 template: |
   ## Changes
 
