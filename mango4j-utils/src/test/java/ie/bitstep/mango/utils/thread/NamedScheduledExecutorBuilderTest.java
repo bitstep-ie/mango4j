@@ -79,7 +79,7 @@ class NamedScheduledExecutorBuilderTest {
 		scheduler.execute(() -> {
 			name1.set(Thread.currentThread().getName());
 			try {
-				Thread.sleep(500);
+				Thread.sleep(500); // NOSONAR: ensure both tasks run concurrently and we get distinct thread names
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
@@ -88,7 +88,7 @@ class NamedScheduledExecutorBuilderTest {
 		scheduler.execute(() -> {
 			name2.set(Thread.currentThread().getName());
 			try {
-				Thread.sleep(500);
+				Thread.sleep(500); // NOSONAR: ensure both tasks run concurrently and we get distinct thread names
 			} catch (InterruptedException e) {
 				throw new RuntimeException(e);
 			}
@@ -189,7 +189,7 @@ class NamedScheduledExecutorBuilderTest {
 
 		// With removeOnCancelPolicy(true), the task should be removed from the queue
 		// Give the executor a brief moment to process cancellation
-		Thread.sleep(50);
+		Thread.sleep(50); // NOSONAR: just a simple wait to allow cancellation to take effect
 
 		assertTrue(exec.getQueue().isEmpty(), "Queue should be empty after cancel with removeOnCancelPolicy=true");
 	}
@@ -230,7 +230,7 @@ class NamedScheduledExecutorBuilderTest {
 		assertTrue(latch.await(2, TimeUnit.SECONDS), "Task should complete");
 
 		// Wait a bit to allow core thread to time out
-		Thread.sleep(1500);
+		Thread.sleep(1500); // NOSONAR: just a simple wait to allow cancellation to take effect
 
 		// There isn't a direct portable way to assert thread timeout without digging into internal counters,
 		// but we can at least assert the configuration flags are set.

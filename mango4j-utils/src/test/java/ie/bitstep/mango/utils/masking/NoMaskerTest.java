@@ -1,6 +1,5 @@
 package ie.bitstep.mango.utils.masking;
 
-import ie.bitstep.mango.utils.masking.NoMasker;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;

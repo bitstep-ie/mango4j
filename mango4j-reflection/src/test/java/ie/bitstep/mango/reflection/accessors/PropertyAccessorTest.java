@@ -23,7 +23,6 @@ class PropertyAccessorTest {
 	@MaskCard
 	@MaskUID
 	@Mask
-	@Deprecated
 	public String name = "Hello";
 	private String privateName = "Goodbye";
 	private String privateNameAnnotatedMethods = "Goodbye";
@@ -31,7 +30,7 @@ class PropertyAccessorTest {
 	private boolean bindable;
 	private int i = 20;
 
-	private UUID uuid = UUID.randomUUID();
+	private UUID uuid = UUID.randomUUID(); // NOSONAR: Needed for testing isCoreType
 
 	public String getPrivateName() {
 		return privateName;
@@ -183,7 +182,7 @@ class PropertyAccessorTest {
 	@Test
 	void testBadGetterAccessors() {
 		Exception thrown = assertThrows(RuntimeException.class, () -> {
-			PropertyAccessor<String> pa = new PropertyAccessor<>(BadGetterAccessorPrivateField.class, "s");
+			new PropertyAccessor<>(BadGetterAccessorPrivateField.class, "s");
 		});
 
 		assertThat(thrown.getCause()).isInstanceOf(NoSuchMethodException.class);
@@ -193,7 +192,7 @@ class PropertyAccessorTest {
 	@Test
 	void testBadSetterAccessors() {
 		Exception thrown = assertThrows(RuntimeException.class, () -> {
-			PropertyAccessor<String> pa = new PropertyAccessor<>(BadSetterAccessorPrivateField.class, "s");
+			new PropertyAccessor<>(BadSetterAccessorPrivateField.class, "s");
 		});
 
 		assertThat(thrown.getCause()).isInstanceOf(NoSuchMethodException.class);
@@ -205,9 +204,7 @@ class PropertyAccessorTest {
 		PropertyAccessor<String> pa = new PropertyAccessor<>(NoAccessorsPrivateField.class, "s");
 		NoAccessorsPrivateField noAccessorsPrivateField = new NoAccessorsPrivateField();
 
-		Exception thrown = assertThrows(IllegalAccessException.class, () -> {
-			pa.set(noAccessorsPrivateField, "Hello Dolly");
-		});
+		assertThrows(IllegalAccessException.class, () -> pa.set(noAccessorsPrivateField, "Hello Dolly"));
 	}
 
 	@Test

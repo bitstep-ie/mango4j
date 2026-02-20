@@ -10,15 +10,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class MethodInfoTest {
 
 	public void method1() {
-
+		// Only used for testing
 	}
 
 	public void method2() {
-
+		// Only used for testing
 	}
 
 	public void parameterAnnotationsMethod(@Modifier String s) {
-
+		// Only used for testing
 	}
 
 	@Test

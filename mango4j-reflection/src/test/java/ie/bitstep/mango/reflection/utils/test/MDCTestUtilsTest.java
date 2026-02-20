@@ -1,6 +1,5 @@
 package ie.bitstep.mango.reflection.utils.test;
 
-import ie.bitstep.mango.reflection.utils.test.MDCTestUtils;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 

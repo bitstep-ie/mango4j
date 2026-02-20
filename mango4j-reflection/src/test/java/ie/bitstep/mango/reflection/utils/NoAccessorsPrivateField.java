@@ -7,7 +7,7 @@ public class NoAccessorsPrivateField {
 	private String s;
 
 	public void dummy() {
-
+		// Only used for testing
 	}
 
 	public void setMessage(String message) {

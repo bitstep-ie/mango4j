@@ -1,6 +1,5 @@
 package ie.bitstep.mango.utils.converters;
 
-import ie.bitstep.mango.utils.converters.CollectionToSize;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

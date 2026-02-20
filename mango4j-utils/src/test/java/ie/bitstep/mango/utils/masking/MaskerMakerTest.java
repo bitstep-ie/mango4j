@@ -1,11 +1,5 @@
 package ie.bitstep.mango.utils.masking;
 
-import ie.bitstep.mango.utils.masking.Mask;
-import ie.bitstep.mango.utils.masking.Masker;
-import ie.bitstep.mango.utils.masking.MaskerMaker;
-import ie.bitstep.mango.utils.masking.NoMasker;
-import ie.bitstep.mango.utils.masking.PanMasker;
-import ie.bitstep.mango.utils.masking.ParameterisedMasker;
 import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
@@ -52,7 +46,7 @@ class MaskerMakerTest {
 		public MockedMaskWhichReturnsExceptionThrowingMaskMethod() {
 		}
 
-		public MockedMaskWhichReturnsExceptionThrowingMaskMethod(Mask mask) {
+		public MockedMaskWhichReturnsExceptionThrowingMaskMethod(Mask mask) { // NOSONAR: test case support
 			throw new RuntimeException("Test Constructor Exception");
 		}
 
@@ -100,7 +94,8 @@ class MaskerMakerTest {
 
 	@Test
 	void makeException() {
-		assertThatThrownBy(() -> maskerMaker.make(new MockedMaskWhichReturnsExceptionThrowingMaskMethod()))
+		MockedMaskWhichReturnsExceptionThrowingMaskMethod mockedMaskWhichReturnsExceptionThrowingMaskMethod = new MockedMaskWhichReturnsExceptionThrowingMaskMethod();
+		assertThatThrownBy(() -> maskerMaker.make(mockedMaskWhichReturnsExceptionThrowingMaskMethod))
 				.isInstanceOf(IllegalStateException.class)
 				.hasCause(MockedMaskWhichReturnsExceptionThrowingMaskMethod.EXCEPTION);
 	}

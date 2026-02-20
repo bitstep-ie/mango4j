@@ -1,8 +1,5 @@
 package ie.bitstep.mango.utils.converters;
 
-import ie.bitstep.mango.utils.converters.CollectionToSize;
-import ie.bitstep.mango.utils.converters.ConverterFactory;
-import ie.bitstep.mango.utils.converters.NoConverter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

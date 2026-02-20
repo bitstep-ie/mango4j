@@ -1,8 +1,6 @@
 package ie.bitstep.mango.reflection.utils;
 
 import ie.bitstep.mango.reflection.accessors.PropertyGetter;
-import ie.bitstep.mango.reflection.utils.ClassInfo;
-import ie.bitstep.mango.reflection.utils.MethodInfo;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
@@ -12,21 +10,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ClassInfoTest {
 
-	private String name = "Hello";
+	private String name = "Hello"; // NOSONAR: Needed for testing property accessors
 
 	@PropertyGetter("test")
 	public void testMethod() {
-
+		// Only used for testing
 	}
 
 	@PropertyGetter("test")
 	public void testMethod(String s) {
-
+		// Only used for testing
 	}
 
 	@PropertyGetter("test")
 	public void testMethodWithArgs(String s, Integer i) {
-
+		// Only used for testing
 	}
 
 	@Test
@@ -89,7 +87,7 @@ class ClassInfoTest {
 	}
 
 	@Test
-	void getMethodByNameDoesNotExist() throws NoSuchMethodException {
+	void getMethodByNameDoesNotExist() {
 		ClassInfo classInfo = new ClassInfo(this.getClass());
 		Method method = classInfo.getMethod("testMethodX");
 
@@ -105,7 +103,7 @@ class ClassInfoTest {
 	}
 
 	@Test
-	void getMethodByNameWithParamsWrongParamTypes() throws NoSuchMethodException {
+	void getMethodByNameWithParamsWrongParamTypes() {
 		ClassInfo classInfo = new ClassInfo(this.getClass());
 		Method method = classInfo.getMethod("testMethod", Integer.class);
 
@@ -129,7 +127,7 @@ class ClassInfoTest {
 	}
 
 	@Test
-	void getMethodInfoByNameDoesNotExist() throws NoSuchMethodException {
+	void getMethodInfoByNameDoesNotExist() {
 		ClassInfo classInfo = new ClassInfo(this.getClass());
 		List<MethodInfo> methods = classInfo.getMethodInfoByName("testMethodX");
 

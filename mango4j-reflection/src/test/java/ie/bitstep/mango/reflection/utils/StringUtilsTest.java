@@ -1,6 +1,5 @@
 package ie.bitstep.mango.reflection.utils;
 
-import ie.bitstep.mango.reflection.utils.StringUtils;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

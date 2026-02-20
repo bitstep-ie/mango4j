@@ -7,6 +7,6 @@ public class BadGetterAccessorPrivateField {
 	private String s;
 
 	public void dummy() {
-
+		// Only used for testing the accessor annotation with a non-existent getter method.
 	}
 }

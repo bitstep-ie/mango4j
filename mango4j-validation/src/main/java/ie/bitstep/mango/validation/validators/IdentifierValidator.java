@@ -1,6 +1,7 @@
 package ie.bitstep.mango.validation.validators;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 
 public class IdentifierValidator {
 	private static final String VALID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -45,8 +46,8 @@ public class IdentifierValidator {
 		return
 			ident == null || (
 			StringUtils.containsOnly(ident, validChars + separator) &&
-			!StringUtils.startsWith(ident, separator) &&
-			!StringUtils.endsWith(ident, separator) &&
-			!StringUtils.contains(ident, separator + separator));
+			!Strings.CS.startsWith(ident, separator) &&
+			!Strings.CS.endsWith(ident, separator) &&
+			!Strings.CS.contains(ident, separator + separator));
 	}
 }
