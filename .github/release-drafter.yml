@@ -42,7 +42,8 @@ version-resolver:
     labels:
       - 'patch'
   default: patch
-initial-version: "1.0.0"
+version-template: >
+  ${PREVIOUS_TAG == '' && '1.0.0' || RESOLVED_VERSION}
 template: |
   ## Changes
 
