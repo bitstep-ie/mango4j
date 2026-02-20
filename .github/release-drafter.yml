@@ -42,6 +42,7 @@ version-resolver:
     labels:
       - 'patch'
   default: patch
+initial-version: "1.0.0"
 template: |
   ## Changes
 
