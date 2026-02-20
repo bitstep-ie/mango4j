@@ -6,7 +6,7 @@ Hibernate proxy resolver used with `ObjectMutator` to unwrap lazy proxies.
 ## How to use
 ### Gradle
 ```gradle
-implementation("ie.bitstep.mango:mango4j-hibernate-proxy-resolver:{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}")
+implementation("ie.bitstep.mango:mango4j-hibernate-proxy-resolver:{{ mango4j_latest_version }}")
 ```
 
 ### Maven
@@ -14,7 +14,7 @@ implementation("ie.bitstep.mango:mango4j-hibernate-proxy-resolver:{{ env.MANGO4J
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j-hibernate-proxy-resolver</artifactId>
-    <version>{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}</version>
+    <version>{{ mango4j_latest_version }}</version>
 </dependency>
 ```
 

@@ -12,7 +12,7 @@ Common collections utilities for map/list construction, map operations, reconcil
 ## Quick start
 ### Gradle
 ```gradle
-implementation("ie.bitstep.mango:mango4j-collections:{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}")
+implementation("ie.bitstep.mango:mango4j-collections:{{ mango4j_latest_version }}")
 ```
 
 ### Maven
@@ -20,7 +20,7 @@ implementation("ie.bitstep.mango:mango4j-collections:{{ env.MANGO4J_LATEST_VERSI
 <dependency>
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j-collections</artifactId>
-    <version>{{ env.MANGO4J_LATEST_VERSION or config.extra.mango4j_default_version }}</version>
+    <version>{{ mango4j_latest_version }}</version>
 </dependency>
 ```
 
