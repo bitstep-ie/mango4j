@@ -15,9 +15,9 @@
 <div align="center">
     <a href="https://github.com/bitstep-ie/mango4j">
     <picture>
-        <source srcset="docs/assets/mango-with-text-black.png" media="(prefers-color-scheme: light)">
-        <source srcset="docs/assets/mango-with-text-white.png" media="(prefers-color-scheme: dark)">
-        <img src="docs/assets/mango-with-text-black.png" alt="mango Logo">
+        <source srcset="documentation/docs/assets/mango-with-text-black.png" media="(prefers-color-scheme: light)">
+        <source srcset="documentation/docs/assets/mango-with-text-white.png" media="(prefers-color-scheme: dark)">
+        <img src="documentation/docs/assets/mango-with-text-black.png" alt="mango Logo">
     </picture>
     </a>
     <h3 align="center">mango-go</h3>
