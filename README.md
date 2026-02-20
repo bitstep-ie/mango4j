@@ -29,11 +29,11 @@
         <br />
         <a href="#">🔎 View Examples</a>
         &middot;
-        <a href="#">
+        <a href="https://github.com/bitstep-ie/mango4j/issues/new?template=bug_report.md">
             🐛 Report Bug
         </a>
         &middot;
-        <a href="#">
+        <a href="https://github.com/bitstep-ie/mango4j/issues/new?template=feature_request.md">
             💡 Request Feature
         </a>
     </p>
