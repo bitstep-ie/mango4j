@@ -8,10 +8,10 @@ public class NoAccessorsPublicField {
 
 	@Modifier
 	public void dummy() {
-
+		// Only used for testing
 	}
 
 	public void message(String s) {
-
+		// Only used for testing
 	}
 }

@@ -1,6 +1,5 @@
 package ie.bitstep.mango.utils.masking;
 
-import ie.bitstep.mango.utils.masking.PanMasker;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

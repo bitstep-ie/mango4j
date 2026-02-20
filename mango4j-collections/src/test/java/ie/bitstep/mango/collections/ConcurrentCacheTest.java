@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
@@ -31,6 +32,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @SuppressWarnings("ALL")
@@ -103,12 +105,22 @@ class ConcurrentCacheTest {
 
 	@Test
 	void lightweightConstructor() {
+		Mockito.reset(nonClosableCleaner); // overwrite the setup in setUp() to verify the default scheduling behavior of the lightweight constructor
 		given(nonClosableCleaner.scheduleAtFixedRate(nonClosableTaskArgumentCaptor.capture(),
 				eq(Duration.ofMinutes(1).toMillis()),
 				eq(Duration.ofMinutes(1).toMillis()),
 				eq(TimeUnit.MILLISECONDS))).willReturn(mockScheduledFuture);
 
 		cache = new ConcurrentCache<>(5, TEST_CACHE_TIME_TO_LIVE_TIME_UNIT, nonClosableCleaner, clock);
+
+		assertThat(getCache(cache)).isEmpty();
+		assertThat(cache.getCacheEntryTTL()).isEqualTo(Duration.ofMillis(5000));
+		assertThat(cache.getCurrentEntryTTL()).isEqualTo(Duration.ofMillis(5000));
+		assertThat(cache.getCacheGracePeriod()).isEqualTo(Duration.ofSeconds(5));
+		then(nonClosableCleaner).should(times(2)).scheduleAtFixedRate(nonClosableTaskArgumentCaptor.capture(),
+				eq(Duration.ofMinutes(1).toMillis()),
+				eq(Duration.ofMinutes(1).toMillis()),
+				eq(TimeUnit.MILLISECONDS));
 	}
 
 	@Test
@@ -145,7 +157,7 @@ class ConcurrentCacheTest {
 	void testGet() {
 		given(clock.instant()).willReturn(Instant.now());
 		cache.put(TEST_KEY, TEST_STRING_VALUE); // set up cache
-// before calling get, make the clock return some arbitrary instant for 'now'
+		// before calling get, make the clock return some arbitrary instant for 'now'
 		Instant updateDate = Instant.ofEpochMilli(56666666L);
 		given(clock.instant()).willReturn(updateDate);
 
@@ -315,46 +327,6 @@ class ConcurrentCacheTest {
 		assertThat(getEvictedEntries(closeableCache)).allMatch(cacheEntry -> getExpiryDate(cacheEntry).equals(now.plus(TEST_GRACE_PERIOD)));
 	}
 
-	private Instant getExpiryDate(CacheEntry cacheEntry) {
-		try {
-			Field expiryDateField = CacheEntry.class.getDeclaredField("expiryDate");
-			expiryDateField.setAccessible(true);
-			return (Instant) expiryDateField.get(cacheEntry);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private AtomicReference<Map.Entry<?, CacheEntry>> getCurrentEntry(ConcurrentCache concurrentCache) {
-		try {
-			Field currentEntry = ConcurrentCache.class.getDeclaredField("currentEntry");
-			currentEntry.setAccessible(true);
-			return (AtomicReference<Map.Entry<?, CacheEntry>>) currentEntry.get(concurrentCache);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private Set<CacheEntry> getEvictedEntries(ConcurrentCache concurrentCache) {
-		try {
-			Field evictedEntriesField = ConcurrentCache.class.getDeclaredField("evictedEntries");
-			evictedEntriesField.setAccessible(true);
-			return (Set<CacheEntry>) evictedEntriesField.get(concurrentCache);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private ConcurrentHashMap<?, CacheEntry> getCache(ConcurrentCache concurrentCache) {
-		try {
-			Field field = ConcurrentCache.class.getDeclaredField("cache");
-			field.setAccessible(true);
-			return (ConcurrentHashMap<?, CacheEntry>) field.get(concurrentCache);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
 	@Test
 	void evictionTaskNotAutoclosable() {
 		Instant birthDate = Instant.now();
@@ -474,7 +446,7 @@ class ConcurrentCacheTest {
 
 		closableTaskArgumentCaptor.getAllValues().get(1).run();
 
-// Verify entry was removed from evictedEntries after closing
+		// Verify entry was removed from evictedEntries after closing
 		assertThat(getEvictedEntries(closeableCache)).isEmpty();
 		then(cachedAutoclosable).should().close();
 	}
@@ -489,7 +461,7 @@ class ConcurrentCacheTest {
 
 		closableTaskArgumentCaptor.getAllValues().get(1).run();
 
-// Verify entry was NOT removed from evictedEntries (not expired yet)
+		// Verify entry was NOT removed from evictedEntries (not expired yet)
 		assertThat(getEvictedEntries(closeableCache)).hasSize(1);
 		assertThat(getEvictedEntries(closeableCache)).contains(notExpiredEntry);
 		then(cachedAutoclosable).shouldHaveNoInteractions();
@@ -504,11 +476,11 @@ class ConcurrentCacheTest {
 
 		closeableCache.shutdown();
 
-// Verify clear was called (cache and current entry should be empty)
+		// Verify clear was called (cache and current entry should be empty)
 		assertThat(getCache(closeableCache)).isEmpty();
 		assertThat(getCurrentEntry(closeableCache).get()).isNull();
 
-// Verify purgeAllEvictedEntries was called (all evicted entries removed and closed)
+		// Verify purgeAllEvictedEntries was called (all evicted entries removed and closed)
 		assertThat(getEvictedEntries(closeableCache)).isEmpty();
 		then(currentAutoclosable).should().close();
 		then(cachedAutoclosable).should().close();
@@ -520,7 +492,7 @@ class ConcurrentCacheTest {
 		Instant now = Instant.now();
 		given(clock.instant()).willReturn(now);
 
-// Add entries to evictedEntries directly
+		// Add entries to evictedEntries directly
 		CacheEntry evictedEntry1 = closeableCache.new CacheEntry<>(currentAutoclosable, TEST_CACHE_DURATION_TTL);
 		CacheEntry evictedEntry2 = closeableCache.new CacheEntry<>(cachedAutoclosable, TEST_CACHE_DURATION_TTL);
 		getEvictedEntries(closeableCache).add(evictedEntry1);
@@ -528,7 +500,7 @@ class ConcurrentCacheTest {
 
 		closeableCache.shutdown();
 
-// Verify all evicted entries were closed and removed
+		// Verify all evicted entries were closed and removed
 		assertThat(getEvictedEntries(closeableCache)).isEmpty();
 		then(currentAutoclosable).should().close();
 		then(cachedAutoclosable).should().close();
@@ -545,7 +517,7 @@ class ConcurrentCacheTest {
 
 		assertThatNoException().isThrownBy(() -> closeableCache.shutdown());
 
-// Even with exception, entry should be removed
+		// Even with exception, entry should be removed
 		assertThat(getEvictedEntries(closeableCache)).isEmpty();
 		then(currentAutoclosable).should().close();
 	}
@@ -553,18 +525,18 @@ class ConcurrentCacheTest {
 	@Test
 	void purgeAllEvictedEntriesWithNonAutoCloseableEntries() {
 
-// This test covers the case where purgeAllEvictedEntries handles non-AutoCloseable gracefully
-// In practice, only AutoCloseable entries are added, but we verify the safety check
+		// This test covers the case where purgeAllEvictedEntries handles non-AutoCloseable gracefully
+		// In practice, only AutoCloseable entries are added, but we verify the safety check
 		cache.shutdown();
 
-// Should complete without exception
+		// Should complete without exception
 		assertThat(getEvictedEntries(cache)).isEmpty();
 	}
 
 	@Test
 	void purgeTaskReturnsTrueForExpiredEntries() throws Exception {
-// This test verifies that the lambda in purgeTask returns true for expired entries
-// This kills the mutant that replaces "return true" with "return false"
+		// This test verifies that the lambda in purgeTask returns true for expired entries
+		// This kills the mutant that replaces "return true" with "return false"
 		Instant now = Instant.now().plus(Duration.ofMinutes(1));
 		given(clock.instant()).willReturn(now);
 
@@ -578,8 +550,8 @@ class ConcurrentCacheTest {
 
 		closableTaskArgumentCaptor.getAllValues().get(1).run();
 
-// If the lambda returns false incorrectly, entries would NOT be removed
-// Verify both entries were removed (lambda returned true)
+		// If the lambda returns false incorrectly, entries would NOT be removed
+		// Verify both entries were removed (lambda returned true)
 		assertThat(getEvictedEntries(closeableCache)).isEmpty();
 		then(currentAutoclosable).should().close();
 		then(cachedAutoclosable).should().close();
@@ -587,8 +559,8 @@ class ConcurrentCacheTest {
 
 	@Test
 	void purgeTaskReturnsFalseForNonExpiredEntries() {
-// This test verifies that the lambda in purgeTask returns false for non-expired entries
-// This kills the mutant that replaces "return false" with "return true"
+		// This test verifies that the lambda in purgeTask returns false for non-expired entries
+		// This kills the mutant that replaces "return false" with "return true"
 		Instant now = Instant.now().plus(Duration.ofMinutes(1));
 		given(clock.instant()).willReturn(now);
 
@@ -602,8 +574,8 @@ class ConcurrentCacheTest {
 
 		closableTaskArgumentCaptor.getAllValues().get(1).run();
 
-// If the lambda returns true incorrectly, entries would be removed even though not expired
-// Verify both entries remain (lambda returned false)
+		// If the lambda returns true incorrectly, entries would be removed even though not expired
+		// Verify both entries remain (lambda returned false)
 		assertThat(getEvictedEntries(closeableCache)).hasSize(2);
 		assertThat(getEvictedEntries(closeableCache)).containsExactlyInAnyOrder(notExpiredEntry1, notExpiredEntry2);
 		then(currentAutoclosable).shouldHaveNoInteractions();
@@ -612,41 +584,41 @@ class ConcurrentCacheTest {
 
 	@Test
 	void shutdownCallsClearToEmptyCacheAndCurrentEntry() {
-// This test verifies that shutdown actually calls clear() and has observable effect
-// This kills the mutant that removes the call to clear()
+		// This test verifies that shutdown actually calls clear() and has observable effect
+		// This kills the mutant that removes the call to clear()
 		Instant now = Instant.now();
 		given(clock.instant()).willReturn(now);
 
 		closeableCache.putCurrent(TEST_KEY, currentAutoclosable);
 		closeableCache.put("cachedKey", cachedAutoclosable);
 
-// Before shutdown, cache and current entry should have data
+		// Before shutdown, cache and current entry should have data
 		assertThat(getCache(closeableCache)).isNotEmpty();
 		assertThat(getCurrentEntry(closeableCache).get()).isNotNull();
 
 		closeableCache.shutdown();
 
-// After shutdown with clear() called, cache and current entry should be empty
-// If clear() is not called, these would still have data
+		// After shutdown with clear() called, cache and current entry should be empty
+		// If clear() is not called, these would still have data
 		assertThat(getCache(closeableCache)).isEmpty();
 		assertThat(getCurrentEntry(closeableCache).get()).isNull();
 	}
 
 	@Test
 	void shutdownCallsPurgeAllEvictedEntriesToCloseResources() throws Exception {
-// This test verifies that shutdown actually calls purgeAllEvictedEntries() and closes resources
-// This kills the mutant that removes the call to purgeAllEvictedEntries()
+		// This test verifies that shutdown actually calls purgeAllEvictedEntries() and closes resources
+		// This kills the mutant that removes the call to purgeAllEvictedEntries()
 		Instant now = Instant.now();
 		given(clock.instant()).willReturn(now);
 
-// Add entries that will be moved to evictedEntries during clear()
+		// Add entries that will be moved to evictedEntries during clear()
 		closeableCache.putCurrent(TEST_KEY, currentAutoclosable);
 		closeableCache.put("cachedKey", cachedAutoclosable);
 
 		closeableCache.shutdown();
 
-// If purgeAllEvictedEntries() is not called, resources would not be closed
-// and evictedEntries would not be empty
+		// If purgeAllEvictedEntries() is not called, resources would not be closed
+		// and evictedEntries would not be empty
 		assertThat(getEvictedEntries(closeableCache)).isEmpty();
 		then(currentAutoclosable).should().close();
 		then(cachedAutoclosable).should().close();
@@ -654,8 +626,8 @@ class ConcurrentCacheTest {
 
 	@Test
 	void purgeAllEvictedEntriesClosesAutoCloseableResources() throws Exception {
-// This test covers the conditional check for AutoCloseable in purgeAllEvictedEntries
-// Lines 230, 232, 238 (NO_COVERAGE mutants)
+		// This test covers the conditional check for AutoCloseable in purgeAllEvictedEntries
+		// Lines 230, 232, 238 (NO_COVERAGE mutants)
 		Instant now = Instant.now();
 		given(clock.instant()).willReturn(now);
 
@@ -664,15 +636,15 @@ class ConcurrentCacheTest {
 
 		closeableCache.shutdown();
 
-// Verify the AutoCloseable was closed
+		// Verify the AutoCloseable was closed
 		then(currentAutoclosable).should().close();
 		assertThat(getEvictedEntries(closeableCache)).isEmpty();
 	}
 
 	@Test
 	void purgeAllEvictedEntriesAlwaysReturnsTrue() throws Exception {
-// This test verifies that purgeAllEvictedEntries lambda always returns true (line 238)
-// This kills the mutant that replaces the return value with false
+		// This test verifies that purgeAllEvictedEntries lambda always returns true (line 238)
+		// This kills the mutant that replaces the return value with false
 		Instant now = Instant.now();
 		given(clock.instant()).willReturn(now);
 
@@ -683,10 +655,50 @@ class ConcurrentCacheTest {
 
 		closeableCache.shutdown();
 
-// If lambda returns false, entries would NOT be removed from evictedEntries
-// Verify all entries were removed (lambda returned true for all)
+		// If lambda returns false, entries would NOT be removed from evictedEntries
+		// Verify all entries were removed (lambda returned true for all)
 		assertThat(getEvictedEntries(closeableCache)).isEmpty();
 		then(currentAutoclosable).should().close();
 		then(cachedAutoclosable).should().close();
+	}
+
+	private Instant getExpiryDate(CacheEntry cacheEntry) {
+		try {
+			Field expiryDateField = CacheEntry.class.getDeclaredField("expiryDate");
+			expiryDateField.setAccessible(true);
+			return (Instant) expiryDateField.get(cacheEntry);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private AtomicReference<Map.Entry<?, CacheEntry>> getCurrentEntry(ConcurrentCache concurrentCache) {
+		try {
+			Field currentEntry = ConcurrentCache.class.getDeclaredField("currentEntry");
+			currentEntry.setAccessible(true);
+			return (AtomicReference<Map.Entry<?, CacheEntry>>) currentEntry.get(concurrentCache);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private Set<CacheEntry> getEvictedEntries(ConcurrentCache concurrentCache) {
+		try {
+			Field evictedEntriesField = ConcurrentCache.class.getDeclaredField("evictedEntries");
+			evictedEntriesField.setAccessible(true);
+			return (Set<CacheEntry>) evictedEntriesField.get(concurrentCache);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private ConcurrentHashMap<?, CacheEntry> getCache(ConcurrentCache concurrentCache) {
+		try {
+			Field field = ConcurrentCache.class.getDeclaredField("cache");
+			field.setAccessible(true);
+			return (ConcurrentHashMap<?, CacheEntry>) field.get(concurrentCache);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 }

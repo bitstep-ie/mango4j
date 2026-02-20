@@ -1,6 +1,5 @@
 package ie.bitstep.mango.utils.converters;
 
-import ie.bitstep.mango.utils.converters.NoConverter;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

@@ -1,6 +1,5 @@
 package ie.bitstep.mango.utils.uuid;
 
-import ie.bitstep.mango.utils.uuid.UUIDv7;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

@@ -1,6 +1,5 @@
 package ie.bitstep.mango.utils.masking;
 
-import ie.bitstep.mango.utils.masking.MaskingUtils;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Constructor;

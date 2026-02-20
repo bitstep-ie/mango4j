@@ -1,6 +1,5 @@
 package ie.bitstep.mango.utils.date;
 
-import ie.bitstep.mango.utils.date.Proximity;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

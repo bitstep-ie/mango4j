@@ -1,6 +1,5 @@
 package ie.bitstep.mango.utils.entity;
 
-import ie.bitstep.mango.utils.entity.EntityToStringBuilder;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -10,6 +9,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@SuppressWarnings("java:S1068") // Unused fields are needed for testing
 class EntityToStringBuilderTest {
 
 	static class TestChild {
@@ -30,7 +30,7 @@ class EntityToStringBuilderTest {
 	}
 
 	static class BadClass {
-		private int $1 = 22;
+		private int $1 = 22; // NOSONAR: Used to test that fields with $ are ignored
 		private String name = "name33";
 		private BigDecimal amount = new BigDecimal("44.44");
 		private Date date = new Date();
