@@ -234,9 +234,24 @@
                 <executions>
                     <execution>
                     <id>sign-artifacts</id>
-                    <phase>deploy</phase>
+                    <phase>verify</phase>
                     <goals>
                         <goal>sign</goal>
+                    </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Sources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                    <id>attach-sources</id>
+                    <goals>
+                        <goal>jar</goal>
                     </goals>
                     </execution>
                 </executions>
