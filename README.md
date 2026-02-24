@@ -63,7 +63,7 @@ Each module is standalone — use only what you need
 - Continuously tested via CI
 
 
-## 📦 Installation
+## 📦 Installation
 
 
 Maven:
