@@ -62,7 +62,9 @@ Each module is standalone — use only what you need
 - Clean API surface — focused helpers, no over-engineering
 - Continuously tested via CI
 
+
 ## 📦 Installation
+
 
 Maven:
 ```
@@ -84,6 +86,7 @@ implementation "ie.bitstep:mango4j:0.1.0"
 ## 🧪 Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) and adhere to the project’s code style and testing guidelines.
+
 
 ## 📘 Documentation
 
