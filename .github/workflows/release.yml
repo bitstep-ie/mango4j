@@ -89,8 +89,8 @@ jobs:
       - name: Release Version Deploy
         working-directory: documentation
         run: |
-          MANGO4J_LATEST_VERSION=${{ replace(needs.draft.outputs.tag, 'v', '') }} \
-          mike deploy ${{ replace(needs.draft.outputs.tag, 'v', '') }} latest -u --push
+          MANGO4J_LATEST_VERSION="${TAG#v}" \
+          mike deploy "${TAG#v}" latest -u --push
 
       - name: Default latest
         working-directory: documentation
