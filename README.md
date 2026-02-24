@@ -40,4 +40,52 @@
 </div>
 <br />
 
+Utility-first Java helper library providing a set of reusable modules that make everyday Java development cleaner, safer, and more ergonomic.
+
+> This repository aggregates core reusable modules (collections, reflection helpers, validation utilities, etc.) under a single Maven project.
+
+
+## 📦 What It Is
+mango4j is a lightweight toolkit of utility modules for Java, designed to reduce boilerplate and improve code clarity. It includes:
+
+- 📁 Collections utilities — helpers for richer data structure work
+- 🔍 Reflection helpers — safer & simpler reflection abstractions
+- 🧪 Validation utilities — common validation helpers
+- 🔧 General utils — file, string, and other core helpers
+- 🧠 Hibernate proxy resolver support (for ORM/EntityProxy handling)
+Each module is standalone — use only what you need
+
+
+## 🚀 Key Benefits
+
+- Modular — pick the utilities you need without dragging unrelated code
+- Clean API surface — focused helpers, no over-engineering
+- Continuously tested via CI
+
+## 📦 Installation
+
+Maven:
+```
+<dependency>
+  <groupId>ie.bitstep</groupId>
+  <artifactId>mango4j</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
+
+Gradle:
+```
+implementation "ie.bitstep:mango4j:0.1.0"
+```
+
+> 📌 Adjust version if you’re using a newer release.
+
+
+## 🧪 Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) and adhere to the project’s code style and testing guidelines.
+
+## 📘 Documentation
+
+Auto-generated docs and examples live in the [project site](https://bitstep-ie.github.io/mango4j/latest/).
 
