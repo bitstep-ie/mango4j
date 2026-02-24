@@ -8,9 +8,6 @@ on:
         required: true
         default: "no"
 
-permissions:
-  contents: read
-
 jobs:
   draft:
     runs-on: ubuntu-latest
