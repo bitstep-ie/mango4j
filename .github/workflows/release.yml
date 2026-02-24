@@ -29,6 +29,8 @@ jobs:
     needs: draft
     if: ${{ github.event.inputs.confirm == 'yes' }}
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.draft.outputs.tag }}
     steps:
       - name: Print data
         run: |
@@ -57,10 +59,8 @@ jobs:
       
       - name: Update pom versions
         run: |
-          TAG="${{needs.draft.outputs.tag}}"
-          VERSION="${TAG#v}"
-          echo "Setting version to $VERSION"
-          mvn -B -q versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
+          echo "Setting version to ${TAG#v}"
+          mvn -B -q versions:set -DnewVersion=${TAG#v} -DgenerateBackupPoms=false
 
       - name: Commit updated pom versions
         run: |
@@ -86,13 +86,13 @@ jobs:
       - name: Fetch gh-pages
         run: git fetch origin gh-pages:gh-pages || echo "No gh-pages branch yet"
 
-      - name: Release Version Deploy
+      - name: Release Version Documentation Deploy
         working-directory: documentation
         run: |
           MANGO4J_LATEST_VERSION="${TAG#v}" \
           mike deploy "${TAG#v}" latest -u --push
 
-      - name: Default latest
+      - name: Default latest on docs
         working-directory: documentation
         run: mike set-default latest --allow-undefined --push
       
@@ -107,7 +107,7 @@ jobs:
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: GPG_PASSPHRASE
 
-      - name: Publish Snapshot
+      - name: Publish Release
         if: github.ref == 'refs/heads/main'
         run: mvn -B deploy
         env:
