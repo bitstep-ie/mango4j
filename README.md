@@ -24,10 +24,10 @@
     <p align="center">
         A collection of utility packages for java
         <br />
-        <a href="#"><strong>📚 Explore the docs »</strong></a>
+        <a href="https://bitstep-ie.github.io/mango4j/latest/"><strong>📚 Explore the docs »</strong></a>
         <br />
         <br />
-        <a href="#">🔎 View Examples</a>
+        <a href="https://bitstep-ie.github.io/mango4j/latest/packages/collections/">🔎 View Examples</a>
         &middot;
         <a href="https://github.com/bitstep-ie/mango4j/issues/new?template=bug_report.md">
             🐛 Report Bug
