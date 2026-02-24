@@ -57,8 +57,8 @@ jobs:
       
       - name: Update pom versions
         run: |
-          VERSION="${{ replace(needs.draft.outputs.tag, 'v', '') }}"
           TAG="${{needs.draft.outputs.tag}}"
+          VERSION="${TAG#v}"
           echo "Setting version to $VERSION"
           mvn -B -q versions:set -DnewVersion=$VERSION -DgenerateBackupPoms=false
 
