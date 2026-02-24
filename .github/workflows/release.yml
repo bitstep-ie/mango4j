@@ -11,6 +11,8 @@ on:
 jobs:
   draft:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       body: ${{ steps.drafter.outputs.body }}
       tag: ${{ steps.drafter.outputs.tag_name }}
