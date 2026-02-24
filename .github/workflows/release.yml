@@ -9,7 +9,7 @@ on:
         default: "no"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   draft:
@@ -19,7 +19,7 @@ jobs:
       tag: ${{ steps.drafter.outputs.tag_name }}
       name: ${{steps.drafter.outputs.name}}
     steps:
-      - uses: release-drafter/release-drafter@v6
+      - uses: release-drafter/release-drafter@267d2e0268deae5d44f3ba5029dd4d6e85f9d52d # v6 - Using full commit sha to avoid security hotspot
         id: drafter
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -29,6 +29,8 @@ jobs:
     needs: draft
     if: ${{ github.event.inputs.confirm == 'yes' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       TAG: ${{ needs.draft.outputs.tag }}
     steps:
@@ -81,7 +83,7 @@ jobs:
           git push
           git push origin "$TAG"
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0 - Using full commit sha to avoid security hotspot
         with:
           tag_name: ${{ needs.draft.outputs.tag }}
           name: ${{ needs.draft.outputs.name }}
