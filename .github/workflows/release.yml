@@ -12,6 +12,26 @@ permissions:
   contents: write
 
 jobs:
+  draft:
+    runs-on: ubuntu-latest
+    outputs:
+      body: ${{ steps.drafter.outputs.body }}
+      tag: ${{ steps.drafter.outputs.tag_name }}
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        id: drafter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  use-draft:
+    needs: draft
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "Tag: ${{ needs.draft.outputs.tag }}"
+          echo "Release Notes:"
+          echo "${{ needs.draft.outputs.body }}"
+
   run:
     if: ${{ github.event.inputs.confirm == 'yes' }}
     runs-on: ubuntu-latest
@@ -34,6 +54,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+      
 
       - name: Fetch gh-pages
         run: git fetch origin gh-pages:gh-pages || echo "No gh-pages branch yet"
