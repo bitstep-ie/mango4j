@@ -3,7 +3,7 @@
 <figure markdown="span">
     ![Logo](./assets/mango-with-text-black.png#only-light)
     ![Logo](./assets/mango-with-text-white.png#only-dark)
-    <figcaption>mango-go</figcaption>
+    <figcaption>mango4j</figcaption>
 </figure>
 
 
