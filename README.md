@@ -20,7 +20,7 @@
         <img src="documentation/docs/assets/mango-with-text-black.png" alt="mango Logo">
     </picture>
     </a>
-    <h3 align="center">mango-go</h3>
+    <h3 align="center">mango4j</h3>
     <p align="center">
         A collection of utility packages for java
         <br />
