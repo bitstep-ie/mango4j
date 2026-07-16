@@ -1,4 +1,4 @@
-mkdocs
-mkdocs-material
-mike
-mkdocs-macros-plugin
+mkdocs==1.6.1
+mkdocs-material==9.6.14
+mike==2.1.3
+mkdocs-macros-plugin==1.3.7
