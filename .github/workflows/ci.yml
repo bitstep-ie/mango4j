@@ -56,6 +56,11 @@ jobs:
           else
             echo "SONAR_TOKEN is available"
           fi
+      - name: Validate Sonar token
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          curl -s -u "${SONAR_TOKEN}:" https://sonarcloud.io/api/authentication/validate
 
       - name: SonarQube Scan
         if: github.event_name != 'pull_request'
