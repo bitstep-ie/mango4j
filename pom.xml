@@ -7,7 +7,7 @@
     
     <groupId>ie.bitstep.mango</groupId>
     <artifactId>mango4j</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Mango4j</name>
@@ -55,7 +55,7 @@
         <!--    Plugin versions    -->
         <maven.deploy.plugin.version>3.1.4</maven.deploy.plugin.version>
         <maven.help.plugin>3.5.1</maven.help.plugin>
-        <maven.compiler.plugin>3.13.0</maven.compiler.plugin>
+        <maven.compiler.plugin>3.15.0</maven.compiler.plugin>
         <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
         <maven.javadoc.plugin.version>3.12.0</maven.javadoc.plugin.version>
         <maven.checkstyle.plugin.version>3.6.0</maven.checkstyle.plugin.version>
@@ -66,7 +66,7 @@
         <!--    Dependencies versions    -->
         <junit-jupiter.version>5.13.3</junit-jupiter.version>
         <junit-mockito.version>5.18.0</junit-mockito.version>
-        <mockito-core.version>5.18.0</mockito-core.version>
+        <mockito-core.version>5.21.0</mockito-core.version>
         <assertj.version>3.27.7</assertj.version>
         <jackson.version>2.22.0</jackson.version>
         <commons-collections.version>4.5.0</commons-collections.version>
