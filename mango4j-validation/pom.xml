@@ -17,7 +17,7 @@
         <commons-text.version>1.13.0</commons-text.version>
         <hibernate-validator.version>8.0.2.Final</hibernate-validator.version>
         <hibernate.version>7.2.1.Final</hibernate.version>
-        <tomcat-embed-el.version>11.0.9</tomcat-embed-el.version>
+        <tomcat-embed-el.version>11.0.24</tomcat-embed-el.version>
     </properties>
 
     <dependencies>
