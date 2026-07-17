@@ -57,7 +57,7 @@ jobs:
 
       - name: Install docs dependencies
         working-directory: documentation
-        run: pip install --only-binary=:all: --require-hashes -r requirements.txt
+        run: "pip install --only-binary=:all: --require-hashes -r requirements.txt"
 
       - name: Configure Git identity
         run: |
