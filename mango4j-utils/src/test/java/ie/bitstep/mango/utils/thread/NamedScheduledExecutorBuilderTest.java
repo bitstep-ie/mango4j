@@ -126,7 +126,7 @@ class NamedScheduledExecutorBuilderTest {
 	}
 
 	@Test
-	void uncaughtExceptionHandlerCapturesThrownExceptions() throws Exception {
+	void uncaughtExceptionHandlerCapturesThrownExceptions() {
 		AtomicReference captured = new AtomicReference<>();
 
 		scheduler = NamedScheduledExecutorBuilder.builder()
@@ -151,7 +151,7 @@ class NamedScheduledExecutorBuilderTest {
 
 
 		assertThatExceptionOfType(ExecutionException.class)
-				.isThrownBy(() -> f.get())
+				.isThrownBy(f::get)
 				.havingCause()
 				.isInstanceOf(RuntimeException.class)
 				.withMessage("boom");
