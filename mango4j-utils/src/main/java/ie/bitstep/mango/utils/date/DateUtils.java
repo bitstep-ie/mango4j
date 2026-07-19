@@ -16,6 +16,7 @@ import java.util.TimeZone;
  * Utility class for working with dates and times.
  */
 @Deprecated(since = "1.1.0")
+@SuppressWarnings("java:S2143") // Suppress Sonar warning to keep working legacy Calendar code
 public class DateUtils {
 
 	private static final String DATE_FORMAT = "yyyy-MM-dd";
