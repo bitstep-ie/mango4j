@@ -21,8 +21,8 @@ import java.util.List;
 import java.util.TimeZone;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.mock;
 import static org.mockito.BDDMockito.then;
 
 /**
@@ -142,8 +142,8 @@ class DateUtilsTest {
 	@Test
 	void getBeginningOfMonth() {
 		long mySuperMillSecondValue = 455L;
-		Calendar mockCalendar = Mockito.mock(Calendar.class);
-		Calendar mockCalendarClone = Mockito.mock(Calendar.class);
+		Calendar mockCalendar = mock(Calendar.class);
+		Calendar mockCalendarClone = mock(Calendar.class);
 
 		calendarUtilsMockedStatic.when(() -> CalendarUtils.clone(mockCalendar))
 			.thenReturn(mockCalendarClone);
@@ -307,44 +307,39 @@ class DateUtilsTest {
 	}
 
 	@Test
-	void testGetDateInUTC_Successful() {
+	void testGetDateInUTC_Successful() throws InvalidDateFormatException {
 		// Set timezone to something other than UTC before test
 		TimeZone.setDefault(TimeZone.getTimeZone("Australia/Adelaide"));
 
 		// verify that the timezone got changed
 		assertThat(TimeZone.getDefault()).isEqualTo(TimeZone.getTimeZone("Australia/Adelaide"));
 
-		try {
-			DateUtils dateUtils = new DateUtils();
-			dateUtils.getDateInUTC("2019-04-02");
-			Date date1 = new Date(dateUtils.getDateInUTC("2019-04-02 11:20:59").toEpochMilli());
-			Date date2 = new Date(dateUtils.getDateInUTC("2018-12-31 23:59:59").toEpochMilli());
+		DateUtils dateUtils = new DateUtils();
+		dateUtils.getDateInUTC("2019-04-02");
+		Date date1 = new Date(dateUtils.getDateInUTC("2019-04-02 11:20:59").toEpochMilli());
+		Date date2 = new Date(dateUtils.getDateInUTC("2018-12-31 23:59:59").toEpochMilli());
 
-			Calendar calendar = Calendar.getInstance();
-			calendar.setTimeZone(tz);
-			calendar.setTime(date1);
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTimeZone(tz);
+		calendar.setTime(date1);
 
-			assertThat(calendar.get(Calendar.DAY_OF_MONTH)).withFailMessage("Day of the month").isEqualTo(2);
-			assertThat(calendar.get(Calendar.HOUR)).withFailMessage("Hour").isEqualTo(11);
-			assertThat(calendar.get(Calendar.MINUTE)).withFailMessage("Minute").isEqualTo(20);
-			assertThat(calendar.get(Calendar.SECOND)).withFailMessage("Second").isEqualTo(59);
-			assertThat(calendar.get(Calendar.MONTH)).withFailMessage("Month").isEqualTo(3);
-			assertThat(calendar.get(Calendar.YEAR)).withFailMessage("Year").isEqualTo(2019);
+		assertThat(calendar.get(Calendar.DAY_OF_MONTH)).withFailMessage("Day of the month").isEqualTo(2);
+		assertThat(calendar.get(Calendar.HOUR)).withFailMessage("Hour").isEqualTo(11);
+		assertThat(calendar.get(Calendar.MINUTE)).withFailMessage("Minute").isEqualTo(20);
+		assertThat(calendar.get(Calendar.SECOND)).withFailMessage("Second").isEqualTo(59);
+		assertThat(calendar.get(Calendar.MONTH)).withFailMessage("Month").isEqualTo(3);
+		assertThat(calendar.get(Calendar.YEAR)).withFailMessage("Year").isEqualTo(2019);
 
-			Calendar calendar2 = Calendar.getInstance();
-			calendar2.setTimeZone(tz);
-			calendar2.setTime(date2);
+		Calendar calendar2 = Calendar.getInstance();
+		calendar2.setTimeZone(tz);
+		calendar2.setTime(date2);
 
-			assertThat(calendar2.get(Calendar.DAY_OF_MONTH)).withFailMessage("Day of the month").isEqualTo(31);
-			assertThat(calendar2.get(Calendar.HOUR_OF_DAY)).withFailMessage("Hour").isEqualTo(23);
-			assertThat(calendar2.get(Calendar.MINUTE)).withFailMessage("Minute").isEqualTo(59);
-			assertThat(calendar2.get(Calendar.SECOND)).withFailMessage("Second").isEqualTo(59);
-			assertThat(calendar2.get(Calendar.MONTH)).withFailMessage("Month").isEqualTo(11);
-			assertThat(calendar2.get(Calendar.YEAR)).withFailMessage("Year").isEqualTo(2018);
-
-		} catch (InvalidDateFormatException ex) {
-			fail();
-		}
+		assertThat(calendar2.get(Calendar.DAY_OF_MONTH)).withFailMessage("Day of the month").isEqualTo(31);
+		assertThat(calendar2.get(Calendar.HOUR_OF_DAY)).withFailMessage("Hour").isEqualTo(23);
+		assertThat(calendar2.get(Calendar.MINUTE)).withFailMessage("Minute").isEqualTo(59);
+		assertThat(calendar2.get(Calendar.SECOND)).withFailMessage("Second").isEqualTo(59);
+		assertThat(calendar2.get(Calendar.MONTH)).withFailMessage("Month").isEqualTo(11);
+		assertThat(calendar2.get(Calendar.YEAR)).withFailMessage("Year").isEqualTo(2018);
 	}
 
 	@ParameterizedTest

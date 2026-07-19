@@ -12,8 +12,10 @@ import java.util.Map;
 import java.util.TimeZone;
 
 /**
+ * @deprecated Uses old Java date API.
  * Utility class for working with dates and times.
  */
+@Deprecated(since = "1.1.0")
 public class DateUtils {
 
 	private static final String DATE_FORMAT = "yyyy-MM-dd";

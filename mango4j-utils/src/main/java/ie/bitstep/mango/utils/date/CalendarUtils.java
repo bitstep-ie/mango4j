@@ -3,6 +3,10 @@ package ie.bitstep.mango.utils.date;
 import java.util.Calendar;
 import java.util.TimeZone;
 
+/**
+ * @deprecated Uses old Java date API.
+ */
+@Deprecated(since = "1.1.0")
 public class CalendarUtils {
 	/**
 	 * Prevents instantiation.

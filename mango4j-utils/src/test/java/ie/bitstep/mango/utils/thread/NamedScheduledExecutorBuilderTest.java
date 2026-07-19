@@ -15,8 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -150,13 +149,12 @@ class NamedScheduledExecutorBuilderTest {
 			throw new RuntimeException("boom");
 		});
 
-		try {
-			f.get();
-			fail("Expected ExecutionException");
-		} catch (ExecutionException ex) {
-			assertTrue(ex.getCause() instanceof RuntimeException);
-			assertEquals("boom", ex.getCause().getMessage());
-		}
+
+		assertThatExceptionOfType(ExecutionException.class)
+				.isThrownBy(() -> f.get())
+				.havingCause()
+				.isInstanceOf(RuntimeException.class)
+				.withMessage("boom");
 
 		// Note: For ScheduledThreadPoolExecutor, UncaughtExceptionHandler is typically used when creating raw threads.
 		// The executor wraps exceptions. We'll still assert that the handler can be set and exists by creating a thread indirectly.
