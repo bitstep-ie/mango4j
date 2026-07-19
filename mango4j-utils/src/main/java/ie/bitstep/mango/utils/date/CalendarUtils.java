@@ -7,7 +7,7 @@ import java.util.TimeZone;
  * @deprecated Uses old Java date API.
  */
 @Deprecated(since = "1.1.0")
-@SuppressWarnings({"java:S2143", "java:1133"}) // Suppress Sonar warnings to keep working legacy Calendar code
+@SuppressWarnings({"java:S2143", "java:S1133"}) // Suppress Sonar warnings to keep working legacy Calendar code
 public class CalendarUtils {
 	/**
 	 * Prevents instantiation.
