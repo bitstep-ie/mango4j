@@ -12,8 +12,11 @@ import java.util.Map;
 import java.util.TimeZone;
 
 /**
+ * @deprecated Uses old Java date API.
  * Utility class for working with dates and times.
  */
+@Deprecated(since = "1.1.0", forRemoval = true)
+@SuppressWarnings({"java:S2143", "java:S2972", "java:S1133"}) // Suppress Sonar warnings to keep working legacy Calendar code
 public class DateUtils {
 
 	private static final String DATE_FORMAT = "yyyy-MM-dd";
