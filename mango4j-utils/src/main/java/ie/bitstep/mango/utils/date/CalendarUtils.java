@@ -22,7 +22,8 @@ public class CalendarUtils {
 	 * @param tz the time zone
 	 * @return a calendar instance
 	 */
-	public static Calendar getInstance(TimeZone tz) {
+	public static Calendar getInstance(TimeZone tz)
+    {
 		return Calendar.getInstance(tz);
 	}
 
@@ -32,7 +33,8 @@ public class CalendarUtils {
 	 * @param calendar the calendar to clone
 	 * @return the cloned calendar
 	 */
-	public static Calendar clone(Calendar calendar) {
+	public static Calendar clone(Calendar calendar)
+    {
 		return (Calendar) calendar.clone();
 	}
 }
