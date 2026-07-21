@@ -7,33 +7,32 @@ import java.util.TimeZone;
  * @deprecated Uses old Java date API.
  */
 @Deprecated(since = "1.1.0", forRemoval = true)
-@SuppressWarnings({"java:S2143", "java:S2972", "java:S1133"})
-// Suppress Sonar warnings to keep working legacy Calendar code
+@SuppressWarnings({"java:S2143", "java:S2972", "java:S1133"}) // Suppress Sonar warnings to keep working legacy Calendar code
 public class CalendarUtils {
-    /**
-     * Prevents instantiation.
-     */
-    private CalendarUtils() {
-        // NOSONAR
-    }
+	/**
+	 * Prevents instantiation.
+	 */
+	private CalendarUtils() {
+		// NOSONAR
+	}
 
-    /**
-     * Returns a calendar instance for the supplied timezone.
-     *
-     * @param tz the time zone
-     * @return a calendar instance
-     */
-    public static Calendar getInstance(TimeZone tz) {
-        return Calendar.getInstance(tz);
-    }
+	/**
+	 * Returns a calendar instance for the supplied timezone.
+	 *
+	 * @param tz the time zone
+	 * @return a calendar instance
+	 */
+	public static Calendar getInstance(TimeZone tz) {
+		return Calendar.getInstance(tz);
+	}
 
-    /**
-     * Clones a calendar instance.
-     *
-     * @param calendar the calendar to clone
-     * @return the cloned calendar
-     */
-    public static Calendar clone(Calendar calendar) {
-        return (Calendar) calendar.clone();
-    }
+	/**
+	 * Clones a calendar instance.
+	 *
+	 * @param calendar the calendar to clone
+	 * @return the cloned calendar
+	 */
+	public static Calendar clone(Calendar calendar) {
+		return (Calendar) calendar.clone();
+	}
 }
